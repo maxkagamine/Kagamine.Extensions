@@ -4,8 +4,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);1591</NoWarn>
     <Authors>Max Kagamine</Authors>
+    <Copyright>Copyright © 2024 Max Kagamine</Copyright>
+    <Description>🍊</Description>
+    <PackageProjectUrl>https://github.com/maxkagamine/Kagamine.Extensions</PackageProjectUrl>
     <RepositoryUrl>https://github.com/maxkagamine/Kagamine.Extensions</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
