@@ -1,0 +1,19 @@
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Pack
+        run: dotnet pack Kagamine.Extensions -c Release -p:Version=${GITHUB_REF#refs/tags/v} -o .
+      - name: Push
+        run: dotnet nuget push Kagamine.Extensions.*.nupkg -k ${GITHUB_TOKEN} -s https://nuget.pkg.github.com/maxkagamine/index.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
