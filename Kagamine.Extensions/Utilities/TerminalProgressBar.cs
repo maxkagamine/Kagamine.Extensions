@@ -13,23 +13,36 @@ public sealed class TerminalProgressBar : IDisposable
 {
     private readonly TextWriter? writer;
 
-    public TerminalProgressBar(bool stderr = false)
+    public TerminalProgressBar()
     {
-        writer = stderr ? Console.IsErrorRedirected ? null : Console.Error :
-                          Console.IsOutputRedirected ? null : Console.Out;
+        writer = !Console.IsOutputRedirected ? Console.Out :
+                 !Console.IsErrorRedirected ? Console.Error :
+                 null;
 
         SetProgress(0);
     }
 
+    /// <summary>
+    /// Updates the state of the progress bar.
+    /// </summary>
+    /// <param name="value">The progress value between zero and <paramref name="maxValue"/>.</param>
+    /// <param name="maxValue">The value that would equal 100%.</param>
     public void SetProgress(int value, int maxValue)
         => SetProgress((float)value / maxValue);
 
+    /// <summary>
+    /// Updates the state of the progress bar.
+    /// </summary>
+    /// <param name="value">The progress value between zero and one.</param>
     public void SetProgress(float value)
     {
         int progress = Math.Clamp((int)Math.Round(value * 100), 0, 100);
         writer?.Write($"\x1b]9;4;1;{progress}\x07");
     }
 
+    /// <summary>
+    /// Removes the progress bar.
+    /// </summary>
     public void ClearProgress()
     {
         writer?.Write("\x1b]9;4;0;0\x07");

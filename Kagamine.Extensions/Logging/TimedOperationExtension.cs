@@ -13,7 +13,16 @@ namespace Kagamine.Extensions.Logging;
 public static class TimedOperationExtension
 {
     // Inspired by SerilogMetrics
- 
+
+    /// <summary>
+    /// Wraps code in a <see langword="using"/> block and logs the start and end of the operation along with how long it
+    /// took to complete.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="level">The log level for the start and end log events.</param>
+    /// <param name="message">A description of the operation being timed, as a message template.</param>
+    /// <param name="args">Objects positionally formatted into the message template.</param>
+    /// <returns>An object that signals the completion of the timed operation when disposed.</returns>
     public static IDisposable BeginTimedOperation(this ILogger logger, LogEventLevel level, string message, params string[] args)
     {
         var sublogger = logger.ForContext("TimedOperationId", Guid.NewGuid());
@@ -30,6 +39,7 @@ public static class TimedOperationExtension
         return disposable;
     }
 
+    /// <inheritdoc cref="BeginTimedOperation(ILogger, LogEventLevel, string, string[])"/>
     public static IDisposable BeginTimedOperation(this ILogger logger, string message, params string[] args)
         => BeginTimedOperation(logger, LogEventLevel.Information, message, args);
 }
