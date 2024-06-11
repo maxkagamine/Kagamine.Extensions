@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace Kagamine.Extensions.Hosting;
 
@@ -21,6 +22,11 @@ public sealed class ConsoleApplicationBuilder : IHostApplicationBuilder
         // Replace the default ConsoleLifetime with one that sets appropriate exit codes
         Services.RemoveAll<IHostLifetime>();
         Services.AddSingleton<IHostLifetime, ConsoleLifetime>();
+
+        // Make sure Japanese text, special chars, etc. don't get mangled on Windows if "Use Unicode UTF-8 for worldwide
+        // language support" in the Region control panel is not checked (no-op on Linux)
+        Console.InputEncoding = Encoding.UTF8;
+        Console.OutputEncoding = Encoding.UTF8;
     }
 
     public ConsoleApplication Build() => new(builder.Build());
