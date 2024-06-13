@@ -54,3 +54,43 @@ for (int i = 0; i < foos.Count; i++)
     await fooService.DoStuff(foos[i]);
 }
 ```
+
+## EntityFramework
+
+`ToHashSetAsync<T>()`, mirroring ToArrayAsync and ToListAsync. Implemented using `await foreach`, like the other two, making it slightly more performant than doing ToListAsync then ToHashSet:
+
+```cs
+HashSet<string> referencedFiles = await db.Foos
+    .Select(f => f.FilePath)
+    .ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
+
+foreach (var file in Directory.EnumerateFiles(dir))
+{
+    if (!referencedFiles.Contains(file))
+    {
+        logger.Warning("Deleting orphaned file {Path}", file);
+        File.Delete(file);
+    }
+}
+```
+
+`Update<T>(this DbSet<T> set, T entity, T valuesFrom)` for replacing an existing entity with a new instance, since EF will throw if you try to pass a detached entity to Update() while another instance with the same primary key is tracked (e.g. by another query performed elsewhere):
+
+```cs
+var existingEntities = await db.Foos.ToDictionaryAsync(f => f.Id);
+
+foreach (var entity in entities)
+{
+    if (existingEntities.Remove(entity.Id, out var existingEntity))
+    {
+        db.Foos.Update(existingEntity, entity);
+    }
+    else
+    {
+        db.Foos.Add(entity);
+    }
+}
+
+db.Foos.RemoveRange(existingEntities.Values);
+await db.SaveChangesAsync();
+```

@@ -1,13 +1,11 @@
 ﻿using Serilog;
 using Serilog.Events;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Reactive.Disposables;
 
 namespace Kagamine.Extensions.Logging;
 
-[EditorBrowsable(EditorBrowsableState.Never)]
-public static class TimedOperationExtension
+public static class TimedOperationExtensions
 {
     // Inspired by SerilogMetrics
 
