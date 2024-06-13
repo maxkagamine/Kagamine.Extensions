@@ -5,11 +5,13 @@ VisualStudioVersion = 17.8.34309.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kagamine.Extensions", "Kagamine.Extensions\Kagamine.Extensions.csproj", "{EEA03EB9-BF93-453B-AE25-AA23147CDCEB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kagamine.Extensions.Generator", "Kagamine.Extensions.Generator\Kagamine.Extensions.Generator.csproj", "{2CAD1D65-DD08-4274-ADCD-450D5EAA568B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kagamine.Extensions.Generator", "Kagamine.Extensions.Generator\Kagamine.Extensions.Generator.csproj", "{2CAD1D65-DD08-4274-ADCD-450D5EAA568B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{835E32B0-BCA9-43A4-9A07-25FDBE85E3F1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp", "Samples\ConsoleApp\ConsoleApp.csproj", "{21A6CE36-3EA9-4AEF-B2C4-0EFD5487ECEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp", "Samples\ConsoleApp\ConsoleApp.csproj", "{21A6CE36-3EA9-4AEF-B2C4-0EFD5487ECEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kagamine.Extensions.EntityFramework", "Kagamine.Extensions.EntityFramework\Kagamine.Extensions.EntityFramework.csproj", "{A265987A-1CCD-4442-8B27-1F8990CAF070}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1BBB5047-4C43-478D-9CF9-07B6965FBF17}"
 	ProjectSection(SolutionItems) = preProject
@@ -34,6 +36,10 @@ Global
 		{21A6CE36-3EA9-4AEF-B2C4-0EFD5487ECEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21A6CE36-3EA9-4AEF-B2C4-0EFD5487ECEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21A6CE36-3EA9-4AEF-B2C4-0EFD5487ECEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A265987A-1CCD-4442-8B27-1F8990CAF070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A265987A-1CCD-4442-8B27-1F8990CAF070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A265987A-1CCD-4442-8B27-1F8990CAF070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A265987A-1CCD-4442-8B27-1F8990CAF070}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
