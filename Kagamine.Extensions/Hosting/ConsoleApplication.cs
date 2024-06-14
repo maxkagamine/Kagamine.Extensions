@@ -42,7 +42,7 @@ public sealed class ConsoleApplication : IHost
         var logger = Services.GetRequiredService<ILogger<ConsoleApplication>>();
 
         // Set up signal handlers and wait for any hosted services to start
-        host.StartAsync().Wait();
+        host.StartAsync().GetAwaiter().GetResult();
 
         // Run the entrypoint function
         try
@@ -61,7 +61,10 @@ public sealed class ConsoleApplication : IHost
         }
 
         // Stop any running hosted services and trigger shutdown event
-        host.StopAsync().Wait();
+        host.StopAsync().GetAwaiter().GetResult();
+
+        // Make sure services are disposed and logs are flushed
+        host.Dispose();
     }
 
     Task IHost.StartAsync(CancellationToken cancellationToken) => host.StartAsync(cancellationToken);
