@@ -25,6 +25,9 @@ builder.Run((IFooService fooService, CancellationToken cancellationToken) =>
 });
 ```
 
+> [!NOTE]
+> ASP.NET Core projects include a launchSettings.json by default which sets the environment to "Development" in dev, but this [needs to be done manually](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments) for a console app. The easiest way in Visual Studio is to open Debug > {Project Name} Debug Properties and under Environment Variables add DOTNET_ENVIRONMENT = Development. Note that the `ASPNETCORE_` prefix won't work here, as it's not a WebApplication.
+
 ## Logging
 
 A small extension method inspired by SerilogMetrics, which I've used on a number of projects in the past:
