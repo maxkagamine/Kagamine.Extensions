@@ -15,9 +15,15 @@ public sealed class ConsoleApplicationBuilder : IHostApplicationBuilder
 {
     private readonly HostApplicationBuilder builder;
 
-    internal ConsoleApplicationBuilder()
+    internal ConsoleApplicationBuilder() : this(args: null)
+    { }
+
+    internal ConsoleApplicationBuilder(string[]? args) : this(new HostApplicationBuilderSettings() { Args = args })
+    { }
+
+    internal ConsoleApplicationBuilder(HostApplicationBuilderSettings? settings)
     {
-        builder = Host.CreateApplicationBuilder();
+        builder = Host.CreateApplicationBuilder(settings);
 
         // Replace the default ConsoleLifetime with one that sets appropriate exit codes
         Services.RemoveAll<IHostLifetime>();

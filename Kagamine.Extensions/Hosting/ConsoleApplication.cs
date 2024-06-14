@@ -24,6 +24,10 @@ public sealed class ConsoleApplication : IHost
 
     public static ConsoleApplicationBuilder CreateBuilder() => new();
 
+    public static ConsoleApplicationBuilder CreateBuilder(string[]? args) => new(args);
+
+    public static ConsoleApplicationBuilder CreateBuilder(HostApplicationBuilderSettings? settings) => new(settings);
+
     public IServiceProvider Services => host.Services;
 
     /// <summary>
