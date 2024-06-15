@@ -58,6 +58,13 @@ for (int i = 0; i < foos.Count; i++)
 }
 ```
 
+RateLimitingHttpHandler, a DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request (run the sample ConsoleApp for a demo):
+
+```cs
+builder.Services.AddSingleton<RateLimitingHttpHandler>();
+builder.Services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler<RateLimitingHttpHandler>();
+```
+
 ## EntityFramework
 
 `ToHashSetAsync<T>()`, mirroring ToArrayAsync and ToListAsync. Implemented using `await foreach`, like the other two, making it slightly more performant than doing ToListAsync then ToHashSet:
