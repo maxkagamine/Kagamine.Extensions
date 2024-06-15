@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0
 
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Reactive.Disposables;
 using System.Runtime.InteropServices;
 
@@ -16,12 +15,10 @@ namespace Kagamine.Extensions.Hosting;
 internal class ConsoleLifetime : IHostLifetime
 {
     private readonly IHostApplicationLifetime lifetime;
-    private readonly ILogger<ConsoleLifetime> logger;
 
-    public ConsoleLifetime(IHostApplicationLifetime lifetime, ILogger<ConsoleLifetime> logger)
+    public ConsoleLifetime(IHostApplicationLifetime lifetime)
     {
         this.lifetime = lifetime;
-        this.logger = logger;
     }
 
     public Task WaitForStartAsync(CancellationToken cancellationToken)
@@ -36,14 +33,12 @@ internal class ConsoleLifetime : IHostLifetime
         return Task.CompletedTask;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2254:Template should be a static expression", Justification = "Looks a bit nicer; not likely to be searched as a group anyway")]
     private void RegisterSignalHandlers()
     {
         Action<PosixSignalContext> CreateHandler(int exitCode) => context =>
         {
             context.Cancel = true;
             Environment.ExitCode = exitCode;
-            logger.LogInformation($"{context.Signal} received.");
             lifetime.StopApplication();
         };
 
