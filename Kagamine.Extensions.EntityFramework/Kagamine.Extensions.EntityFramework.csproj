@@ -9,6 +9,7 @@
     <Copyright>Copyright © 2024 Max Kagamine</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Description>🍊</Description>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/maxkagamine/Kagamine.Extensions</PackageProjectUrl>
     <RepositoryUrl>https://github.com/maxkagamine/Kagamine.Extensions</RepositoryUrl>
     <PackageReleaseNotes>https://github.com/maxkagamine/Kagamine.Extensions/releases</PackageReleaseNotes>
@@ -17,6 +18,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
