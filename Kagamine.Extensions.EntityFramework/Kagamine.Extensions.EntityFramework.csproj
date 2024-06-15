@@ -8,13 +8,20 @@
     <Authors>Max Kagamine</Authors>
     <Copyright>Copyright © 2024 Max Kagamine</Copyright>
     <Description>🍊</Description>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/maxkagamine/Kagamine.Extensions</PackageProjectUrl>
     <RepositoryUrl>https://github.com/maxkagamine/Kagamine.Extensions</RepositoryUrl>
+    <PackageReleaseNotes>https://github.com/maxkagamine/Kagamine.Extensions/releases</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

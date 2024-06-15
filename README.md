@@ -1,4 +1,4 @@
-# 🍊 Kagamine.Extensions
+# <img src="icon.png" height="38" alt="🍊" align="top" /> Kagamine.Extensions
 
 This repository contains a suite of libraries that provide facilities commonly needed when creating production-ready applications. (As Microsoft puts it.)
 
