@@ -29,4 +29,10 @@
     <None Include="..\icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
+  <Target Name="SetPackageIconUrl" AfterTargets="InitializeSourceControlInformationFromSourceControlManager">
+    <PropertyGroup>
+      <PackageIconUrl>https://raw.githubusercontent.com/maxkagamine/Kagamine.Extensions/$(SourceRevisionId)/icon.png</PackageIconUrl>
+    </PropertyGroup>
+  </Target>
+
 </Project>
