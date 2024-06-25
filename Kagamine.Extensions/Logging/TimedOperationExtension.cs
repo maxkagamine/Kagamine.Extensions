@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0
 
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
 using System.Reactive.Disposables;
@@ -18,26 +19,28 @@ public static class TimedOperationExtensions
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="level">The log level for the start and end log events.</param>
-    /// <param name="message">A description of the operation being timed, as a message template.</param>
-    /// <param name="args">Objects positionally formatted into the message template.</param>
+    /// <param name="messageTemplate">A description of the operation being timed, as a message template.</param>
+    /// <param name="propertyValues">Objects positionally formatted into the message template.</param>
     /// <returns>An object that signals the completion of the timed operation when disposed.</returns>
-    public static IDisposable BeginTimedOperation(this ILogger logger, LogEventLevel level, string message, params string[] args)
+    [MessageTemplateFormatMethod(nameof(messageTemplate))]
+    public static IDisposable BeginTimedOperation(this ILogger logger, LogEventLevel level, string messageTemplate, params object?[]? propertyValues)
     {
         var sublogger = logger.ForContext("TimedOperationId", Guid.NewGuid());
         var sw = new Stopwatch();
         var disposable = Disposable.Create(() =>
         {
             sw.Stop();
-            sublogger.Write(level, message + ": Completed in {Milliseconds:F2} ms", [.. args, sw.Elapsed.TotalMilliseconds]);
+            sublogger.Write(level, messageTemplate + ": Completed in {Milliseconds:F2} ms", [.. propertyValues, sw.Elapsed.TotalMilliseconds]);
         });
 
-        sublogger.Write(level, message + ": Starting", args);
+        sublogger.Write(level, messageTemplate + ": Starting", propertyValues);
 
         sw.Start();
         return disposable;
     }
 
-    /// <inheritdoc cref="BeginTimedOperation(ILogger, LogEventLevel, string, string[])"/>
-    public static IDisposable BeginTimedOperation(this ILogger logger, string message, params string[] args)
-        => BeginTimedOperation(logger, LogEventLevel.Information, message, args);
+    /// <inheritdoc cref="BeginTimedOperation(ILogger, LogEventLevel, string, object[])"/>
+    [MessageTemplateFormatMethod(nameof(messageTemplate))]
+    public static IDisposable BeginTimedOperation(this ILogger logger, string messageTemplate, params object?[]? propertyValues)
+        => BeginTimedOperation(logger, LogEventLevel.Information, messageTemplate, propertyValues);
 }
