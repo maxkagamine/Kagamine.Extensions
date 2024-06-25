@@ -19,40 +19,40 @@ namespace Kagamine.Extensions.Collections;
 [DebuggerDisplay("Length = {Length}")]
 [DebuggerTypeProxy(typeof(ValueArrayDebugView<>))]
 [CollectionBuilder(typeof(ValueArray), nameof(ValueArray.Create))]
-public class ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T>>, IStructuralEquatable, IComparable<ValueArray<T>>, IStructuralComparable
+public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T>>, IStructuralEquatable, IComparable<ValueArray<T>>, IStructuralComparable
 {
-#pragma warning disable IDE0301 // Simplify collection initialization
-    public static readonly ValueArray<T> Empty = new(Array.Empty<T>());
-#pragma warning restore IDE0301 // Simplify collection initialization
+    public static readonly ValueArray<T> Empty = default;
 
-    protected readonly T[] array;
+    readonly T[]? array;
 
     public ValueArray(T[] array)
     {
         this.array = array;
     }
 
-    public int Length => array.Length;
+    private T[] Array => array ?? [];
+
+    public int Length => Array.Length;
 
     /// <summary>
     /// Creates a new span over the array.
     /// </summary>
-    public ReadOnlySpan<T> AsSpan() => array.AsSpan();
+    public ReadOnlySpan<T> AsSpan() => Array.AsSpan();
 
     public static implicit operator ReadOnlySpan<T>(ValueArray<T> array) => array.AsSpan();
 
     public static implicit operator ValueArray<T>(T[] array) => new(array);
 
-    public static explicit operator T[](ValueArray<T> array) => array.array;
+    public static explicit operator T[](ValueArray<T> array) => array.Array;
 
     #region IReadOnlyList
-    public T this[int index] => array[index];
+    public T this[int index] => Array[index];
 
     int IReadOnlyCollection<T>.Count => Length;
 
-    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)array).GetEnumerator();
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Array).GetEnumerator();
 
-    IEnumerator IEnumerable.GetEnumerator() => array.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => Array.GetEnumerator();
     #endregion
 
     #region IEquatable
@@ -60,16 +60,16 @@ public class ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T>>, IStruc
 
     public static bool operator !=(ValueArray<T> left, ValueArray<T> right) => !(left == right);
 
-    public sealed override bool Equals(object? obj) => Equals(obj, EqualityComparer<T>.Default);
+    public override bool Equals(object? obj) => Equals(obj, EqualityComparer<T>.Default);
 
-    public bool Equals(ValueArray<T>? other) => Equals(other, EqualityComparer<T>.Default);
+    public bool Equals(ValueArray<T> other) => Equals(other, EqualityComparer<T>.Default);
 
-    public virtual bool Equals(object? other, IEqualityComparer comparer) =>
-        other is ValueArray<T> obj && ((IStructuralEquatable)array).Equals(obj.array, comparer);
+    public bool Equals(object? other, IEqualityComparer comparer) =>
+        other is ValueArray<T> obj && ((IStructuralEquatable)Array).Equals(obj.Array, comparer);
 
     public override int GetHashCode() => GetHashCode(EqualityComparer<T>.Default);
 
-    public virtual int GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)array).GetHashCode(comparer);
+    public int GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)Array).GetHashCode(comparer);
     #endregion
 
     #region IComparable
@@ -81,9 +81,10 @@ public class ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T>>, IStruc
 
     public static bool operator >=(ValueArray<T> left, ValueArray<T> right) => left.CompareTo(right) >= 0;
 
-    public int CompareTo(ValueArray<T>? other) => CompareTo(other, Comparer<T>.Default);
+    public int CompareTo(ValueArray<T> other) => CompareTo(other, Comparer<T>.Default);
 
-    public virtual int CompareTo(object? other, IComparer comparer) => ((IStructuralComparable)array).CompareTo((other as ValueArray<T>)?.array, comparer);
+    public int CompareTo(object? other, IComparer comparer) =>
+        ((IStructuralComparable)Array).CompareTo(other is ValueArray<T> array ? array.Array : null, comparer);
     #endregion
 }
 
