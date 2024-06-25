@@ -57,7 +57,11 @@ public sealed class ConsoleApplication : IHost
         {
             logger.LogCritical(ex, "Unhandled exception.");
             Environment.ExitCode = 255;
-            Console.Write("\a"); // Flashes the taskbar if the terminal's not in the foreground
+
+            if (!Console.IsOutputRedirected)
+            {
+                Console.Write("\a"); // Flashes the taskbar if the terminal's not in the foreground
+            }
         }
 
         // Stop any running hosted services and trigger shutdown event

@@ -14,10 +14,14 @@ public sealed class TerminalProgressBar : IDisposable
     private readonly TextWriter? writer;
 
     public TerminalProgressBar()
+        : this(!Console.IsOutputRedirected ? Console.Out :
+               !Console.IsErrorRedirected ? Console.Error :
+               null)
+    { }
+
+    public TerminalProgressBar(TextWriter? writer)
     {
-        writer = !Console.IsOutputRedirected ? Console.Out :
-                 !Console.IsErrorRedirected ? Console.Error :
-                 null;
+        this.writer = writer;
 
         SetProgress(0);
     }
