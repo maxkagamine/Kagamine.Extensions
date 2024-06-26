@@ -28,6 +28,63 @@ builder.Run((IFooService fooService, CancellationToken cancellationToken) =>
 > [!NOTE]
 > ASP.NET Core projects include a launchSettings.json by default which sets the environment to "Development" in dev, but this [needs to be done manually](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments) for a console app. The easiest way in Visual Studio is to open Debug > {Project Name} Debug Properties and under Environment Variables add DOTNET_ENVIRONMENT = Development. Note that the `ASPNETCORE_` prefix won't work here, as it's not a WebApplication.
 
+## Collections
+
+There's currently no solution in .NET for putting a collection in a record while maintaining both immutability and value semantics. It's also sometimes necessary to have access to the underlying array for interop with APIs that do not support spans (especially for byte arrays, where copying can have a significant performance impact).
+
+To solve this, I've created a ValueArray&lt;T&gt; type which represents a read-only array with value type semantics suitable for use in immutable records:
+
+| Type                        | Immutable        | Value equality | To/from array w/o copying |
+| --------------------------- | ---------------- | -------------- | ------------------------- |
+| T[]                         | ❌               | ❌            | ✅                        |
+| List&lt;T&gt;               | ❌               | ❌            | ❌                        |
+| ReadOnlyCollection&lt;T&gt; | ✅<sup>1</sup>   | ❌            | ❌                        |
+| IReadOnlyList&lt;T&gt;      | ✅<sup>1</sup>   | ❌            | ❌                        |
+| ImmutableArray&lt;T&gt;<sup>2</sup> | ✅<sup>3,4</sup> | ❌    | ✅<sup>3</sup>            |
+| ReadOnlyMemory&lt;T&gt;     | ✅<sup>4,5</sup> | ❌            | ⚠<sup>5</sup>             |
+| **ValueArray&lt;T&gt;**     | ✅<sup>4,6</sup> | ✅            | ✅<sup>6</sup>            |
+
+> 1. ReadOnlyCollection&lt;T&gt; is merely a read-only view of a List&lt;T&gt;, and IReadOnlyList&lt;T&gt; is usually the List&lt;T&gt; itself.
+> 2. Has a bug caused by misuse of the null suppression operator that can cause a null reference exception which won't be caught by static analysis if any code returns its `default`. (ValueArray&lt;T&gt; fixes this by treating a null array as empty, as it is also a struct.)
+> 3. [ImmutableCollectionsMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.immutablecollectionsmarshal?view=net-8.0) can be used to access the underlying array or create an instance backed by an existing array.
+> 4. Can be modified inadvertently if a reference is held to the array used to construct it, or if the underlying buffer is accessed and passed to a method that does not treat it as read-only.
+> 5. Depending on how the ReadOnlyMemory&lt;T&gt; was created, it may be possible to access the buffer using [MemoryMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.memorymarshal.trygetarray?view=net-8.0), but there's no guarantee the instance is backed by an actual array, or it may represent a slice of an array (like Span&lt;T&gt;).
+> 6. Supports implicit conversion from T[], and the underlying array can be accessed via explicit cast to T[].
+
+ValueArray&lt;T&gt; supports both [collection expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/collection-expressions) and array initializers (via implicit cast):
+
+```cs
+record Song(string Title, ValueArray<string> Artists);
+
+Song song = new("Promise", ["samfree", "Kagamine Rin", "Hatsune Miku"]);
+Song song2 = song with { Artists = [.. song.Artists] /* Clone the array */ };
+
+// These would fail if Artists were List<T>, despite the contents being identical
+Assert.True(song == song2);
+Assert.True(song.Artists == song2.Artists);
+
+ValueArray<Song> songs = new[] { song, song2 };
+```
+
+It's interoperable with spans as well as APIs requiring arrays such as Entity Framework. Using a value converter, a ValueArray&lt;byte&gt; can be cast to its underlying byte[] to use as a BLOB column without the overhead of copying an array:
+
+```cs
+entity.Property<ValueArray<byte>>(x => x.Data)
+    .HasColumnName("data")
+    .HasConversion(model => (byte[])model, column => column);
+```
+
+When `T` is an [unmanaged type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types), ValueArray&lt;T&gt; can also be marshaled to and from ReadOnlySpan&lt;byte&gt;. This could be used, for instance, to store an array of structs in a database as an opaque blob using their binary representation.
+
+I've created a JsonConverter that uses this to efficiently serialize a ValueArray&lt;T&gt; as a base 64 string:
+
+```cs
+ValueArray<DateTime> dates = [ DateTime.Parse("2007-08-31"), DateTime.Parse("2007-12-27") ];
+
+var options = new JsonSerializerOptions() { Converters = { new JsonBase64ValueArrayConverter() } };
+var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=="
+```
+
 ## Logging
 
 A small extension method inspired by SerilogMetrics, which I've used on a number of projects in the past:
