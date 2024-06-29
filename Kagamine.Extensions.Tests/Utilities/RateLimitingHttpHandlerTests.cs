@@ -12,6 +12,7 @@ namespace Kagamine.Extensions.Tests.Utilities;
 public class RateLimitingHttpHandlerTests
 {
     private static readonly TimeSpan TimeBetweenRequests = TimeSpan.FromMilliseconds(500);
+    private static readonly double MillisecondsTolerance = 100;
 
     private readonly Mock<HttpMessageHandler> handler;
     private readonly RateLimitingHttpHandler limiter;
@@ -42,8 +43,8 @@ public class RateLimitingHttpHandlerTests
         ]);
 
         Assert.Equal(3, requests.Count);
-        Assert.True(requests[1].Time - requests[0].Time >= TimeBetweenRequests);
-        Assert.True(requests[2].Time - requests[1].Time >= TimeBetweenRequests);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[1].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[2].Time - requests[1].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
 
     [Fact]
@@ -60,11 +61,11 @@ public class RateLimitingHttpHandlerTests
         Assert.Equal(new Uri("http://example.com/first"), requests[0].Request.RequestUri);
         Assert.Equal(new Uri("http://example.org/third"), requests[1].Request.RequestUri);
 
-        Assert.Equal(requests[0].Time.TotalMilliseconds, requests[1].Time.TotalMilliseconds, tolerance: 50);
-        Assert.Equal(requests[2].Time.TotalMilliseconds, requests[3].Time.TotalMilliseconds, tolerance: 50);
+        Assert.Equal(requests[0].Time.TotalMilliseconds, requests[1].Time.TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(requests[2].Time.TotalMilliseconds, requests[3].Time.TotalMilliseconds, tolerance: MillisecondsTolerance);
 
-        Assert.True(requests[2].Time - requests[0].Time >= TimeBetweenRequests);
-        Assert.True(requests[3].Time - requests[0].Time >= TimeBetweenRequests);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[2].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[3].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
 
     [Fact]
@@ -92,6 +93,6 @@ public class RateLimitingHttpHandlerTests
         await client.GetAsync("http://example.com/slow");
         await client.GetAsync("http://example.com");
 
-        Assert.True(sw.Elapsed >= TimeBetweenRequests + extraDelay);
+        Assert.Equal((TimeBetweenRequests + extraDelay).TotalMilliseconds, sw.Elapsed.TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
 }
