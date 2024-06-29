@@ -4,6 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Kagamine.Extensions.Hosting;
 
@@ -41,6 +42,33 @@ public sealed class ConsoleApplication : IHost
         var lifetime = Services.GetRequiredService<IHostApplicationLifetime>();
         var logger = Services.GetRequiredService<ILogger<ConsoleApplication>>();
 
+        // Using the unhandled exception handler instead of a try-catch so that the debugger breaks on unhandled
+        // exceptions without needing to set it to break on every thrown exception (which can be annoying)
+        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        {
+            logger.LogCritical((Exception)e.ExceptionObject, "Unhandled exception.");
+
+            if (!Console.IsOutputRedirected)
+            {
+                Console.Write("\a"); // Flashes the taskbar if the terminal's not in the foreground
+            }
+
+            // Make sure services are disposed and logs are flushed
+            try
+            {
+                host.Dispose();
+            }
+            catch { }
+
+            // Prevent the CLR from handling the exception and printing it to the console a second time, unless we're
+            // debugging in which case it's unavoidable (exiting here would prevent the debugger from breaking on the
+            // exception, and Console.SetError() doesn't work as the write to stderr happens in the runtime)
+            if (!Debugger.IsAttached)
+            {
+                Environment.Exit(255);
+            }
+        };
+
         // Set up signal handlers and wait for any hosted services to start
         host.StartAsync().GetAwaiter().GetResult();
 
@@ -52,16 +80,6 @@ public sealed class ConsoleApplication : IHost
         catch (OperationCanceledException)
         {
             // no op
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "Unhandled exception.");
-            Environment.ExitCode = 255;
-
-            if (!Console.IsOutputRedirected)
-            {
-                Console.Write("\a"); // Flashes the taskbar if the terminal's not in the foreground
-            }
         }
 
         // Stop any running hosted services and trigger shutdown event

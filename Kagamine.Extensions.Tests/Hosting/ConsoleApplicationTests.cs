@@ -4,7 +4,6 @@
 using Kagamine.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Kagamine.Extensions.Tests.Hosting;
@@ -43,34 +42,19 @@ public class ConsoleApplicationTests
     [Fact]
     public void CancelsWhenStopped()
     {
-        var builder = ConsoleApplication.CreateBuilder();
-        builder.Run((IHostApplicationLifetime lifetime, CancellationToken cancellationToken) =>
+        var host = ConsoleApplication.CreateBuilder().Build();
+        var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+
+        host.Run((CancellationToken cancellationToken) =>
         {
             Assert.True(lifetime.ApplicationStarted.IsCancellationRequested);
             Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
             Assert.False(cancellationToken.IsCancellationRequested);
             lifetime.StopApplication();
             Assert.True(cancellationToken.IsCancellationRequested);
-            Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
-        });
-    }
-
-    [Fact]
-    public void LogsUnhandledExceptionsAndSetsExitCode()
-    {
-        var logger = new Mock<ILogger<ConsoleApplication>>();
-        var exception = new Exception("foo");
-
-        var builder = ConsoleApplication.CreateBuilder();
-        builder.Services.AddSingleton(logger.Object);
-        builder.Run(void (CancellationToken _) =>
-        {
-            throw exception;
         });
 
-        logger.Verify(x => x.Log(LogLevel.Critical, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), exception, It.IsAny<Func<It.IsAnyType, Exception?, string>>()));
-
-        Assert.Equal(255, Environment.ExitCode);
+        Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
     }
 
     [Fact]
