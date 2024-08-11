@@ -45,6 +45,14 @@ public sealed class TerminalProgressBar : IDisposable
     }
 
     /// <summary>
+    /// Sets the progress bar to the "indeterminate" state.
+    /// </summary>
+    public void SetIndeterminate()
+    {
+        writer?.Write("\x1b]9;4;3;0\x07");
+    }
+
+    /// <summary>
     /// Removes the progress bar.
     /// </summary>
     public void ClearProgress()

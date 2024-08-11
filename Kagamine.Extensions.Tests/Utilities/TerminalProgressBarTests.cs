@@ -27,6 +27,11 @@ public class TerminalProgressBarTests
         Assert.Equal("\x1b]9;4;1;39\x07", stdout.ToString());
 
         stdout.Clear();
+        progress.SetIndeterminate();
+
+        Assert.Equal("\x1b]9;4;3;0\x07", stdout.ToString());
+
+        stdout.Clear();
         progress.Dispose();
 
         Assert.Equal("\x1b]9;4;0;0\x07", stdout.ToString());
