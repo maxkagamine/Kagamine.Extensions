@@ -30,7 +30,14 @@ public class RateLimitingHttpHandlerTests
 
         handler.SetupAnyRequest()
             .ReturnsResponse(HttpStatusCode.OK)
-            .Callback((HttpRequestMessage request, CancellationToken _) => requests.Add((sw.Elapsed, request)));
+            .Callback((HttpRequestMessage request, CancellationToken _) =>
+            {
+                var elapsed = sw.Elapsed;
+                lock (requests)
+                {
+                    requests.Add((elapsed, request));
+                }
+            });
     }
 
     [Fact]
