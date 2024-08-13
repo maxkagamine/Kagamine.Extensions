@@ -85,6 +85,8 @@ var options = new JsonSerializerOptions() { Converters = { new JsonBase64ValueAr
 var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=="
 ```
 
+To deserialize an array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
+
 ## Logging
 
 A small extension method inspired by SerilogMetrics, which I've used on a number of projects in the past:

@@ -11,6 +11,9 @@ namespace Kagamine.Extensions.Collections;
 /// <summary>
 /// Serializes all <see cref="ValueArray{T}"/> as base 64 strings. Array cannot contain reference types.
 /// </summary>
+/// <remarks>
+/// Cannot be used in conjunction with <see cref="JsonValueArrayConverter"/>.
+/// </remarks>
 public class JsonBase64ValueArrayConverter : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert) =>
