@@ -43,11 +43,11 @@ public class RateLimitingHttpHandlerTests
     [Fact]
     public async Task RateLimitsRequestsToSameHost()
     {
-        await Task.WhenAll([
+        await Task.WhenAll(
             client.GetAsync("http://example.com/first"),
             client.GetAsync("https://example.com/second"),
             client.GetAsync("http://EXAMPLE.COM/third")
-        ]);
+        );
 
         Assert.Equal(3, requests.Count);
         Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[1].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
@@ -57,12 +57,12 @@ public class RateLimitingHttpHandlerTests
     [Fact]
     public async Task DifferentHostsAreRateLimitedSeparately()
     {
-        await Task.WhenAll([
+        await Task.WhenAll(
             client.GetAsync("http://example.com/first"),
             client.GetAsync("http://example.com/second"),
             client.GetAsync("http://example.org/third"),
             client.GetAsync("http://example.org/fourth")
-        ]);
+        );
 
         Assert.Equal(4, requests.Count);
         Assert.Equal(new Uri("http://example.com/first"), requests[0].Request.RequestUri);

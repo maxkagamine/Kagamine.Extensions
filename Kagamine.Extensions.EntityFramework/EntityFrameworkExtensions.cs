@@ -8,6 +8,7 @@ namespace Kagamine.Extensions.EntityFramework;
 
 public static class EntityFrameworkExtensions
 {
+#if NET8_0
     /// <summary>
     /// Asynchronously creates a <see cref="HashSet{T}"/> from an <see cref="IQueryable{T}"/> by enumerating it
     /// asynchronously.
@@ -33,6 +34,7 @@ public static class EntityFrameworkExtensions
     /// <inheritdoc cref="ToHashSetAsync{TSource}(IQueryable{TSource}, IEqualityComparer{TSource}?, CancellationToken)"/>
     public static Task<HashSet<TSource>> ToHashSetAsync<TSource>(this IQueryable<TSource> source, CancellationToken cancellationToken = default)
         => ToHashSetAsync(source, null, cancellationToken);
+#endif
 
     /// <summary>
     /// Sets the values and navigation properties of this entity by copying from the given object.

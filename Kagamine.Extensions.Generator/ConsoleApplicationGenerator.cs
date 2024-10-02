@@ -48,7 +48,7 @@ public class ConsoleApplicationGenerator : ISourceGenerator
         context.AddSource("ConsoleApplicationExtensions.g.cs", source.ToString());
     }
 
-    private string[] StartMethod(StringBuilder method, string extend, int paramCount, bool isAsync, bool returnsInt)
+    private static string[] StartMethod(StringBuilder method, string extend, int paramCount, bool isAsync, bool returnsInt)
     {
         // Define type parameters
         string[] typeParams = Enumerable.Range(1, paramCount).Select(i => $"T{i}").ToArray();
@@ -57,7 +57,7 @@ public class ConsoleApplicationGenerator : ISourceGenerator
         // Define delegate type
         string delegateBaseType = returnsInt || isAsync ? "Func" : "Action";
         string[] delegateReturnType = isAsync ? returnsInt ? ["Task<int>"] : ["Task"] : returnsInt ? ["int"] : [];
-        string delegateParams = string.Join(", ", [.. typeParams, "CancellationToken", .. delegateReturnType]);
+        string delegateParams = string.Join(", ", (IEnumerable<string>)[.. typeParams, "CancellationToken", .. delegateReturnType]);
         string delegateType = $"{delegateBaseType}<{delegateParams}>";
 
         // Descriptions can all be the same
@@ -75,7 +75,7 @@ public class ConsoleApplicationGenerator : ISourceGenerator
         return typeParams;
     }
 
-    private string CreateHostExtension(int paramCount, bool isAsync, bool returnsInt)
+    private static string CreateHostExtension(int paramCount, bool isAsync, bool returnsInt)
     {
         var method = new StringBuilder();
         var typeParams = StartMethod(method, "ConsoleApplication app", paramCount, isAsync, returnsInt);
@@ -95,8 +95,8 @@ public class ConsoleApplicationGenerator : ISourceGenerator
         }
 
         // Wrap and execute delegate
-        string args = string.Join(", ", [.. typeParams.Select(t => t.ToLowerInvariant()), "cancellationToken"]);
-        
+        string args = string.Join(", ", (IEnumerable<string>)[.. typeParams.Select(t => t.ToLowerInvariant()), "cancellationToken"]);
+
         method.AppendLine("        app.Run(cancellationToken =>");
         method.AppendLine("        {");
 
@@ -123,7 +123,7 @@ public class ConsoleApplicationGenerator : ISourceGenerator
         return method.ToString();
     }
 
-    private string CreateBuilderExtension(int paramCount, bool isAsync, bool returnsInt)
+    private static string CreateBuilderExtension(int paramCount, bool isAsync, bool returnsInt)
     {
         var method = new StringBuilder();
         StartMethod(method, "ConsoleApplicationBuilder builder", paramCount, isAsync, returnsInt);
