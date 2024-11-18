@@ -23,7 +23,7 @@ public static class TimedOperationExtensions
     /// <param name="propertyValues">Objects positionally formatted into the message template.</param>
     /// <returns>An object that signals the completion of the timed operation when disposed.</returns>
     [MessageTemplateFormatMethod(nameof(messageTemplate))]
-    public static IDisposable BeginTimedOperation(this ILogger logger, LogEventLevel level, string messageTemplate, params object?[]? propertyValues)
+    public static IDisposable BeginTimedOperation(this ILogger logger, LogEventLevel level, string messageTemplate, params object?[] propertyValues)
     {
         var sublogger = logger.ForContext("TimedOperationId", Guid.NewGuid());
         var sw = new Stopwatch();
@@ -41,6 +41,6 @@ public static class TimedOperationExtensions
 
     /// <inheritdoc cref="BeginTimedOperation(ILogger, LogEventLevel, string, object[])"/>
     [MessageTemplateFormatMethod(nameof(messageTemplate))]
-    public static IDisposable BeginTimedOperation(this ILogger logger, string messageTemplate, params object?[]? propertyValues)
+    public static IDisposable BeginTimedOperation(this ILogger logger, string messageTemplate, params object?[] propertyValues)
         => BeginTimedOperation(logger, LogEventLevel.Information, messageTemplate, propertyValues);
 }

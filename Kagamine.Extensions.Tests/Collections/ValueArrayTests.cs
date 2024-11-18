@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 namespace Kagamine.Extensions.Tests.Collections;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1861:Avoid constant arrays as arguments", Justification = "Tests")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Bug in IDE analyzer")]
 public class ValueArrayTests
 {
     record Person(string Surname, string GivenName);
