@@ -9,6 +9,7 @@ namespace Kagamine.Extensions.IO;
 public sealed class TemporaryFile : IDisposable
 {
     private bool hasDeleteWhenClosedStream;
+    private bool isDisposed;
 
     internal TemporaryFile(string path)
     {
@@ -18,7 +19,14 @@ public sealed class TemporaryFile : IDisposable
     /// <summary>
     /// The absolute path to the temporary file.
     /// </summary>
-    public string Path { get; }
+    public string Path
+    {
+        get
+        {
+            CheckIfDisposed();
+            return field;
+        }
+    }
 
     /// <summary>
     /// Opens the file with the given file access and sharing.
@@ -32,6 +40,8 @@ public sealed class TemporaryFile : IDisposable
     /// cleaning up the file.</returns>
     public FileStream Open(FileAccess access, FileShare share, bool deleteWhenClosed = false)
     {
+        CheckIfDisposed();
+
         hasDeleteWhenClosedStream |= deleteWhenClosed;
 
         // FileOptions.DeleteOnClose seems to conflict with FileShare.Read, so we override FileStream.Dispose() instead
@@ -76,11 +86,22 @@ public sealed class TemporaryFile : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (!hasDeleteWhenClosedStream)
+        if (!hasDeleteWhenClosedStream && !isDisposed)
         {
             File.Delete(Path);
+            isDisposed = true;
         }
     }
+
+    private void CheckIfDisposed()
+    {
+        if (isDisposed)
+        {
+            throw new InvalidOperationException("The temporary file has already been deleted.");
+        }
+    }
+
+    public override string ToString() => Path;
 
     private class TemporaryFileStream(TemporaryFile tempFile, FileAccess access, FileShare share)
         : FileStream(tempFile.Path, FileMode.Open, access, share)
@@ -88,7 +109,12 @@ public sealed class TemporaryFile : IDisposable
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            File.Delete(tempFile.Path);
+
+            if (!tempFile.isDisposed)
+            {
+                File.Delete(tempFile.Path);
+                tempFile.isDisposed = true;
+            }
         }
     }
 }

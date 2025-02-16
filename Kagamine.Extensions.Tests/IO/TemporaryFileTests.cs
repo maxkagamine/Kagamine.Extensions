@@ -20,7 +20,7 @@ public sealed class TemporaryFileTests : IDisposable
     public void Dispose()
     {
         // Make sure the file is deleted if the test fails
-        File.Delete(tempFile.Path);
+        File.Delete(path);
     }
 
     [Theory]
@@ -110,5 +110,48 @@ public sealed class TemporaryFileTests : IDisposable
 
         // File was not deleted, and nothing threw
         Assert.True(File.Exists(path));
+    }
+
+    [Fact]
+    public void DisposingTwiceCantDeleteADifferentTempFile()
+    {
+        // Covers an edge case where, once the temp file has been deleted, its filename becomes available again and by
+        // sheer chance is taken by another TemporaryFile, but then the first one is disposed again -- e.g. due to a
+        // deleteWhenClosed stream's finalizer calling Dispose(false) -- resulting in it deleting the new temp file that
+        // doesn't belong to it.
+
+        Assert.True(File.Exists(path));
+        tempFile.Dispose();
+        Assert.False(File.Exists(path));
+
+        File.Create(path).Dispose(); // Same filename now belongs to someone else
+
+        Assert.True(File.Exists(path));
+        tempFile.Dispose();
+        Assert.True(File.Exists(path)); // File was not mistakenly deleted
+
+        // Reset and try with a deleteWhenClosed stream this time
+        var stream = new TemporaryFile(path).OpenRead(deleteWhenClosed: true);
+        stream.Dispose();
+        Assert.False(File.Exists(path));
+
+        File.Create(path).Dispose(); // Same filename now belongs to someone else (again)
+
+        Assert.True(File.Exists(path));
+        stream.Dispose();
+        Assert.True(File.Exists(path)); // File was not mistakenly deleted
+    }
+
+    [Fact]
+    public void CannotAccessFileOnceDisposed()
+    {
+        // Similar to the above, this avoids accidentally opening a different temp file after its filename was freed
+
+        tempFile.Dispose();
+        File.Create(path).Dispose(); // Same filename now belongs to someone else
+
+        Assert.Throws<InvalidOperationException>(() => tempFile.OpenRead().Dispose());
+        Assert.Throws<InvalidOperationException>(() => tempFile.OpenWrite().Dispose());
+        Assert.Throws<InvalidOperationException>(() => _ = tempFile.Path);
     }
 }
