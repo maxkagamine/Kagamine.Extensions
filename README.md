@@ -87,6 +87,40 @@ var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=
 
 To deserialize an array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
 
+## IO
+
+TemporaryFileProvider provides a number of advantages for working with temp files over `Path.GetTempFileName()`:
+
+- Unlike `GetTempFileName()`, it's possible to specify a file extension or suffix, which may be necessary when passing the file path to certain programs (unlike common solutions on Stack Overflow, it guarantees that the file name is unique and avoids race conditions);
+- Temp files are stored in an application-specific directory which is removed if empty when the application quits;
+- The TemporaryFile can be placed in a `using` which will automatically clean up the temp file when disposed;
+- TemporaryFile _doesn't_ maintain an open handle to the file, which allows for the file path to be passed to other programs like ffmpeg which may overwrite or replace the file (and expect it to not be in use);
+- 👉 **Most importantly:** a method can return a FileStream backed by the temp file which automatically deletes the file when the stream is closed — this works even when the TemporaryFile itself is in a `using`, simplifying common error handling patterns such as:
+
+```cs
+public async Task<Stream> ConvertToOpus(Stream inputStream, CancellationToken cancellationToken)
+{
+    using TemporaryFile inputFile = tempFileProvider.Create();
+    await inputFile.CopyFromAsync(inputStream);
+
+    using TemporaryFile outputFile = tempFileProvider.Create(".opus");
+
+    await FFMpegArguments
+        .FromFileInput(inputFile.Path)
+        .OutputToFile(outputFile.Path, overwrite: true, options => options
+            .WithAudioBitrate(Bitrate))
+        .CancellableThrough(cancellationToken)
+        .ProcessAsynchronously();
+
+    // If ffmpeg throws, both temp files will be deleted.
+    // 
+    // If it succeeds, the input file is deleted, but the output file remains on
+    // disk as the returned FileStream keeps it open. When the stream is closed,
+    // the remaining temp file will be cleaned up automatically.
+    return outputFile.OpenRead(deleteWhenClosed: true);
+}
+```
+
 ## Logging
 
 A small extension method inspired by SerilogMetrics, which I've used on a number of projects in the past:
