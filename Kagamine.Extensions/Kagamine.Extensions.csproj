@@ -21,4 +21,8 @@
     <ProjectReference Include="..\Kagamine.Extensions.Generator\Kagamine.Extensions.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kagamine.Extensions.Tests" />
+  </ItemGroup>
+  
 </Project>
