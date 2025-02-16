@@ -97,12 +97,12 @@ public sealed class TemporaryFileTests : IDisposable
         {
             using TemporaryFile tempFile = this.tempFile; // tempFileProvider.Create();
 
-            // Do some file conversion that might fail. If it throws, and the file isn't open, the TemporaryFile's
-            // Dispose() method will delete the file without us having to do anything.
+            // Do some file conversion that might fail. If this throws, TemporaryFile.Dispose() will delete the file
+            // without us having to do anything.
             DoFileConversion(inputFile, tempFile.Path);
 
-            // If it succeeds, return a FileStream backed by the temp file which cleans it up when disposed; since a
-            // stream is open, the TemporaryFile's Dispose() won't delete the file when this method returns.
+            // If it succeeds, return a FileStream backed by the temp file which cleans it up when disposed; this sets a
+            // a flag in TemporaryFile which will prevent it from deleting the file when this method returns.
             return tempFile.OpenRead(deleteWhenClosed: true);
         }
 

@@ -115,8 +115,8 @@ public async Task<Stream> ConvertToOpus(Stream inputStream, CancellationToken ca
     // If ffmpeg throws, both temp files will be deleted.
     // 
     // If it succeeds, the input file is deleted, but the output file remains on
-    // disk as the returned FileStream keeps it open. When the stream is closed,
-    // the remaining temp file will be cleaned up automatically.
+    // disk until the returned stream is closed, at which point the remaining
+    // temp file will be cleaned up automatically.
     return outputFile.OpenRead(deleteWhenClosed: true);
 }
 ```

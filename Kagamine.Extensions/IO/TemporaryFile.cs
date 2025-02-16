@@ -8,6 +8,8 @@ namespace Kagamine.Extensions.IO;
 /// </summary>
 public sealed class TemporaryFile : IDisposable
 {
+    private bool hasDeleteWhenClosedStream;
+
     internal TemporaryFile(string path)
     {
         Path = path;
@@ -28,10 +30,15 @@ public sealed class TemporaryFile : IDisposable
     /// caller is responsible for disposing the stream prior to disposing the <see cref="TemporaryFile"/>. Otherwise,
     /// the <see cref="TemporaryFile"/> can be safely disposed or thrown away, as the returned stream will take care of
     /// cleaning up the file.</returns>
-    public FileStream Open(FileAccess access, FileShare share, bool deleteWhenClosed = false) =>
-        deleteWhenClosed ?
+    public FileStream Open(FileAccess access, FileShare share, bool deleteWhenClosed = false)
+    {
+        hasDeleteWhenClosedStream |= deleteWhenClosed;
+
+        // FileOptions.DeleteOnClose seems to conflict with FileShare.Read, so we override FileStream.Dispose() instead
+        return deleteWhenClosed ?
             new TemporaryFileStream(this, access, share) :
             new FileStream(Path, FileMode.Open, access, share);
+    }
 
     /// <summary>
     /// Opens the file for reading.
@@ -65,15 +72,14 @@ public sealed class TemporaryFile : IDisposable
     }
 
     /// <summary>
-    /// Deletes the temporary file, provided it is not in use by any open streams or other processes.
+    /// Deletes the temporary file, unless any streams were opened with <c>deleteWhenClosed</c>.
     /// </summary>
     public void Dispose()
     {
-        try
+        if (!hasDeleteWhenClosedStream)
         {
             File.Delete(Path);
         }
-        catch (IOException) { }
     }
 
     private class TemporaryFileStream(TemporaryFile tempFile, FileAccess access, FileShare share)
@@ -82,7 +88,7 @@ public sealed class TemporaryFile : IDisposable
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            tempFile.Dispose();
+            File.Delete(tempFile.Path);
         }
     }
 }
