@@ -80,7 +80,7 @@ public class RateLimitingHttpHandlerTests
     {
         var sw = Stopwatch.StartNew();
         await client.GetAsync("http://example.com");
-        Assert.True(sw.ElapsedMilliseconds < 50);
+        Assert.True(sw.Elapsed < TimeBetweenRequests);
     }
 
     [Fact]
