@@ -54,4 +54,20 @@ public static class ValueArray
     {
         return MemoryMarshal.AsBytes(array.AsSpan());
     }
+
+    /// <summary>
+    /// Creates a span over the array and marshals it as a read-only span of <see langword="byte"/>, then copies the
+    /// contents of the <see langword="byte"/> span into a new array.
+    /// </summary>
+    /// <remarks>
+    /// This is equivalent to <c>.AsBytes().ToArray()</c> but avoids an errant compiler warning when used in an
+    /// expression parameter such as EF's <c>HasConversion()</c>, since a ref struct would normally not be allowed
+    /// there.
+    /// </remarks>
+    /// <typeparam name="T">The array element type. Cannot contain reference types.</typeparam>
+    /// <param name="array">The array to marshal as bytes.</param>
+    /// <exception cref="ArgumentException"/>
+    public static byte[] ToByteArray<T>(ValueArray<T> array)
+        where T : unmanaged
+        => array.AsBytes().ToArray();
 }
