@@ -9,39 +9,22 @@ namespace Kagamine.Extensions.Utilities;
 /// A <see cref="DelegatingHandler"/> that forces requests to the same host to wait for a configured period of time
 /// since the last request completed before sending a new request.
 /// </summary>
-public class RateLimitingHttpHandler : DelegatingHandler
+/// <remarks>
+/// As the Microsoft.Extensions.Http infrastructure rotates inner handlers and expects delegating handlers to be
+/// transient, the rate limiter itself is held outside of the handler in <see cref="RateLimitingHttpHandlerFactory"/>.
+/// Use the factory to create an instance of this type.
+/// </remarks>
+public sealed class RateLimitingHttpHandler : DelegatingHandler
 {
-    private const int DefaultSecondsBetweenRequests = 3;
-
     private readonly PartitionedRateLimiter<HttpRequestMessage> rateLimiter;
-    private readonly TimeSpan timeBetweenRequests;
+    private readonly Func<RateLimitingHttpHandlerOptions> optionsAccessor;
 
-    /// <summary>
-    /// Creates a <see cref="DelegatingHandler"/> that forces requests to the same host to wait for a default number of
-    /// seconds since the last request completed before sending a new request.
-    /// </summary>
-    public RateLimitingHttpHandler() : this(TimeSpan.FromSeconds(DefaultSecondsBetweenRequests))
-    { }
-
-    /// <summary>
-    /// Creates a <see cref="DelegatingHandler"/> that forces requests to the same host to wait for a configured period
-    /// of time since the last request completed before sending a new request.
-    /// </summary>
-    /// <param name="timeBetweenRequests">The amount of time to wait between requests, per host.</param>
-    public RateLimitingHttpHandler(TimeSpan timeBetweenRequests)
+    internal RateLimitingHttpHandler(
+        PartitionedRateLimiter<HttpRequestMessage> rateLimiter,
+        Func<RateLimitingHttpHandlerOptions> optionsAccessor)
     {
-        this.timeBetweenRequests = timeBetweenRequests;
-
-        rateLimiter = PartitionedRateLimiter.Create((HttpRequestMessage req) =>
-            RateLimitPartition.GetConcurrencyLimiter(
-                partitionKey: req.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "",
-                factory: _ => new ConcurrencyLimiterOptions()
-                {
-                    PermitLimit = 1,
-                    QueueLimit = int.MaxValue,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                }),
-                equalityComparer: StringComparer.OrdinalIgnoreCase);
+        this.rateLimiter = rateLimiter;
+        this.optionsAccessor = optionsAccessor;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -56,19 +39,9 @@ public class RateLimitingHttpHandler : DelegatingHandler
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(timeBetweenRequests);
+                await Task.Delay(optionsAccessor().TimeBetweenRequests);
                 lease.Dispose();
             }, CancellationToken.None);
         }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            rateLimiter.Dispose();
-        }
-
-        base.Dispose(disposing);
     }
 }

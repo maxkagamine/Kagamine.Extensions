@@ -20,8 +20,7 @@ builder.Services.AddSerilog(config => config
     .WriteTo.Console(new ExpressionTemplate(
         "{#if SourceContext is not null}[{SourceContext}] {#end}{@m}\n{@x}", theme: TemplateTheme.Code)));
 
-builder.Services.AddSingleton<RateLimitingHttpHandler>();
-builder.Services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler<RateLimitingHttpHandler>();
+builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiter();
 
 builder.Services.AddTemporaryFileProvider();
 
