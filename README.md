@@ -137,7 +137,27 @@ using (logger.BeginTimedOperation(nameof(DoStuff)))
 
 ## Utilities
 
-TerminalProgressBar class which sends ANSI escape codes to display a [progress bar in the terminal](https://learn.microsoft.com/en-us/windows/terminal/tutorials/progress-bar-sequences) and clear it automatically when disposed:
+### RateLimitingHttpHandler
+
+A DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request (run the sample [ConsoleApp](Samples/ConsoleApp/Program.cs) for a demo):
+
+```cs
+builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiter();
+```
+
+The per-host rate limit is shared across all named clients that have `AddRateLimiter()` applied. To change the default time between requests or set different rate limits per host:
+
+```cs
+services.Configure<HttpClientRateLimiterOptions>(options =>
+{
+    options.TimeBetweenRequests = TimeSpan.FromSeconds(1);
+    options.TimeBetweenRequestsByHost.Add("example.com", TimeSpan.FromSeconds(5));
+});
+```
+
+### TerminalProgressBar
+
+Sends ANSI escape codes to display a [progress bar in the terminal](https://learn.microsoft.com/en-us/windows/terminal/tutorials/progress-bar-sequences) and clear it automatically when disposed:
 
 ```cs
 using var progress = new TerminalProgressBar();
@@ -149,13 +169,6 @@ for (int i = 0; i < foos.Count; i++)
 
     await fooService.DoStuff(foos[i]);
 }
-```
-
-RateLimitingHttpHandler, a DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request (run the sample ConsoleApp for a demo):
-
-```cs
-builder.Services.AddSingleton<RateLimitingHttpHandler>();
-builder.Services.AddHttpClient(Options.DefaultName).AddHttpMessageHandler<RateLimitingHttpHandler>();
 ```
 
 ## EntityFramework
