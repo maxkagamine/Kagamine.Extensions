@@ -17,7 +17,6 @@ public class RateLimitingHttpHandlerTests
     private static readonly double MillisecondsTolerance = 100;
 
     private readonly Mock<HttpMessageHandler> handler;
-    private readonly RateLimitingHttpHandler limiter;
     private readonly HttpClient client;
 
     private readonly List<(TimeSpan Time, HttpRequestMessage Request)> requests = [];
@@ -26,10 +25,15 @@ public class RateLimitingHttpHandlerTests
     {
         handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
 
-        limiter = new RateLimitingHttpHandlerFactory(new() { TimeBetweenRequests = TimeBetweenRequests }).CreateHandler();
-        limiter.InnerHandler = handler.Object;
+        ServiceCollection services = new();
 
-        client = new HttpClient(limiter);
+        services.Configure<HttpClientRateLimiterOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
+        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
+            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        client = serviceProvider.GetRequiredService<HttpClient>();
 
         var sw = Stopwatch.StartNew();
 
@@ -113,7 +117,7 @@ public class RateLimitingHttpHandlerTests
     {
         ServiceCollection services = new();
 
-        services.Configure<RateLimitingHttpHandlerOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
+        services.Configure<HttpClientRateLimiterOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
 
         services.AddHttpClient(Options.DefaultName).AddRateLimiter()
             .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
@@ -139,72 +143,56 @@ public class RateLimitingHttpHandlerTests
     }
 
     [Fact]
-    public async Task NamedRateLimitersAreIndependent()
+    public async Task CanSetRateLimitPerHost()
     {
         ServiceCollection services = new();
 
-        Stopwatch sw = Stopwatch.StartNew();
+        TimeSpan t1 = TimeSpan.FromMilliseconds(450);
+        TimeSpan t2 = TimeSpan.FromMilliseconds(700);
 
-        List<TimeSpan> timesDefault = [];
-        Mock<HttpMessageHandler> handlerDefault = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerDefault.SetupAnyRequest()
-            .ReturnsResponse(HttpStatusCode.OK)
-            .Callback((HttpRequestMessage request, CancellationToken _) =>
-            {
-                var elapsed = sw.Elapsed;
-                lock (timesDefault)
-                {
-                    timesDefault.Add(elapsed);
-                }
-            });
+        services.Configure<HttpClientRateLimiterOptions>(options =>
+        {
+            options.TimeBetweenRequests = t1;
+            options.TimeBetweenRequestsByHost.Add("example.org", t2);
+        });
 
-        List<TimeSpan> timesFoo = [];
-        Mock<HttpMessageHandler> handlerFoo = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerFoo.SetupAnyRequest()
-            .ReturnsResponse(HttpStatusCode.OK)
-            .Callback((HttpRequestMessage request, CancellationToken _) =>
-            {
-                var elapsed = sw.Elapsed;
-                lock (timesFoo)
-                {
-                    timesFoo.Add(elapsed);
-                }
-            });
-
-        services.AddHttpClient(Options.DefaultName)
-            .AddRateLimiter(options => options.TimeBetweenRequests = TimeBetweenRequests)
-            .ConfigurePrimaryHttpMessageHandler(() => handlerDefault.Object);
-
-        services.AddHttpClient("foo")
-            .AddRateLimiter("foo", options => options.TimeBetweenRequests = TimeBetweenRequests * 2)
-            .ConfigurePrimaryHttpMessageHandler(() => handlerFoo.Object);
+        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
+            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        await Parallel.ForAsync(0, 6, async (i, cancellationToken) =>
-        {
-            using var scope = serviceProvider.CreateScope();
-            var client = i % 2 == 0 ?
-                scope.ServiceProvider.GetRequiredService<HttpClient>() :
-                scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("foo");
+        var client = serviceProvider.GetRequiredService<HttpClient>();
 
-            await client.GetAsync("http://example.com", cancellationToken);
-        });
+        await Task.WhenAll(
+            client.GetAsync("http://example.com/first"),
+            client.GetAsync("http://example.com/second"),
+            client.GetAsync("http://example.org/third"),
+            client.GetAsync("http://example.org/fourth"),
+            client.GetAsync("http://example.org/fifth"),
+            client.GetAsync("http://example.com/sixth")
+        );
 
-        // Default    Foo
-        // 0ms        0ms
-        // 500ms      1000ms
-        // 1000ms     2000ms
+        // first   0ms
+        // third          0ms
+        // second  450ms
+        // fourth         700ms
+        // sixth   900ms
+        // fifth          1400ms
 
-        Assert.Equal(3, timesDefault.Count);
-        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (timesDefault[1] - timesDefault[0]).TotalMilliseconds, tolerance: MillisecondsTolerance);
-        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (timesDefault[2] - timesDefault[1]).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(6, requests.Count);
+        Assert.Equal(new Uri("http://example.com/first"), requests[0].Request.RequestUri);
+        Assert.Equal(new Uri("http://example.org/third"), requests[1].Request.RequestUri);
+        Assert.Equal(new Uri("http://example.com/second"), requests[2].Request.RequestUri);
+        Assert.Equal(new Uri("http://example.org/fourth"), requests[3].Request.RequestUri);
+        Assert.Equal(new Uri("http://example.com/sixth"), requests[4].Request.RequestUri);
+        Assert.Equal(new Uri("http://example.org/fifth"), requests[5].Request.RequestUri);
 
-        Assert.Equal(3, timesFoo.Count);
-        Assert.Equal(TimeBetweenRequests.TotalMilliseconds * 2, (timesFoo[1] - timesFoo[0]).TotalMilliseconds, tolerance: MillisecondsTolerance);
-        Assert.Equal(TimeBetweenRequests.TotalMilliseconds * 2, (timesFoo[2] - timesFoo[1]).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(requests[0].Time.TotalMilliseconds, requests[1].Time.TotalMilliseconds, tolerance: MillisecondsTolerance);
 
-        Assert.Equal(timesDefault[0].TotalMilliseconds, timesFoo[0].TotalMilliseconds, tolerance: MillisecondsTolerance);
-        Assert.Equal(timesDefault[2].TotalMilliseconds, timesFoo[1].TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(t1.TotalMilliseconds, (requests[2].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(t1.TotalMilliseconds, (requests[4].Time - requests[2].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+
+        Assert.Equal(t2.TotalMilliseconds, (requests[3].Time - requests[1].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+        Assert.Equal(t2.TotalMilliseconds, (requests[5].Time - requests[3].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
 }

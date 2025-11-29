@@ -10,18 +10,17 @@ namespace Kagamine.Extensions.Utilities;
 /// since the last request completed before sending a new request.
 /// </summary>
 /// <remarks>
-/// As the Microsoft.Extensions.Http infrastructure rotates inner handlers and expects delegating handlers to be
-/// transient, the rate limiter itself is held outside of the handler in <see cref="RateLimitingHttpHandlerFactory"/>.
-/// Use the factory to create an instance of this type.
+/// This type cannot be constructed directly. See <see cref="RateLimitingHttpHandlerFactory"/> and <see
+/// cref="DependencyInjectionExtensions.AddRateLimiter(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
 /// </remarks>
 public sealed class RateLimitingHttpHandler : DelegatingHandler
 {
     private readonly PartitionedRateLimiter<HttpRequestMessage> rateLimiter;
-    private readonly Func<RateLimitingHttpHandlerOptions> optionsAccessor;
+    private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
 
     internal RateLimitingHttpHandler(
         PartitionedRateLimiter<HttpRequestMessage> rateLimiter,
-        Func<RateLimitingHttpHandlerOptions> optionsAccessor)
+        Func<HttpClientRateLimiterOptions> optionsAccessor)
     {
         this.rateLimiter = rateLimiter;
         this.optionsAccessor = optionsAccessor;
@@ -39,7 +38,11 @@ public sealed class RateLimitingHttpHandler : DelegatingHandler
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(optionsAccessor().TimeBetweenRequests);
+                HttpClientRateLimiterOptions options = optionsAccessor();
+                string host = request.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "";
+                TimeSpan timeBetweenRequests = options.TimeBetweenRequestsByHost.GetValueOrDefault(host, options.TimeBetweenRequests);
+
+                await Task.Delay(timeBetweenRequests);
                 lease.Dispose();
             }, CancellationToken.None);
         }

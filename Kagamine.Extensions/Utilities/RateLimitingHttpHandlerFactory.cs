@@ -1,19 +1,31 @@
 // Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 
 namespace Kagamine.Extensions.Utilities;
 
 /// <summary>
-/// Factory for creating a <see cref="RateLimitingHttpHandler"/> which forces requests to the same host to wait for a
-/// configured period of time since the last request completed before sending a new request. All handlers created by
-/// this factory share the same rate limiter.
+/// Factory for creating <see cref="RateLimitingHttpHandler"/> instances which force requests to the same host to wait
+/// for a configured period of time since the last request completed before sending a new request. All handlers created
+/// by the factory share the same rate limiter.
 /// </summary>
+/// <remarks>
+/// <para>
+///     To use with dependency injection, see <see
+///     cref="DependencyInjectionExtensions.AddRateLimiter(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
+/// </para>
+/// <para>
+///     This factory is necessary as the Microsoft.Extensions.Http infrastructure rotates inner handlers and expects the
+///     delegating handlers that wrap around them to be new instances not already in use. The handlers therefore cannot
+///     be singletons or hold state.
+/// </para>
+/// </remarks>
 public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposable
 {
+    private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
+
     private readonly PartitionedRateLimiter<HttpRequestMessage> rateLimiter =
         PartitionedRateLimiter.Create((HttpRequestMessage req) =>
             RateLimitPartition.GetConcurrencyLimiter(
@@ -26,18 +38,16 @@ public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposab
                 }),
                 equalityComparer: StringComparer.OrdinalIgnoreCase);
 
-    private readonly Func<RateLimitingHttpHandlerOptions> optionsAccessor;
-
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> with default options.
     /// </summary>
-    public RateLimitingHttpHandlerFactory() : this(new RateLimitingHttpHandlerOptions())
+    public RateLimitingHttpHandlerFactory() : this(new HttpClientRateLimiterOptions())
     { }
 
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> with the specified options.
     /// </summary>
-    public RateLimitingHttpHandlerFactory(RateLimitingHttpHandlerOptions options)
+    public RateLimitingHttpHandlerFactory(HttpClientRateLimiterOptions options)
     {
         optionsAccessor = () => options;
     }
@@ -45,11 +55,9 @@ public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposab
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> via dependency injection.
     /// </summary>
-    public RateLimitingHttpHandlerFactory(
-        IOptionsMonitor<RateLimitingHttpHandlerOptions> options,
-        [ServiceKey] string name)
+    public RateLimitingHttpHandlerFactory(IOptionsMonitor<HttpClientRateLimiterOptions> options)
     {
-        optionsAccessor = () => options.Get(name);
+        optionsAccessor = () => options.CurrentValue;
     }
 
     /// <summary>
