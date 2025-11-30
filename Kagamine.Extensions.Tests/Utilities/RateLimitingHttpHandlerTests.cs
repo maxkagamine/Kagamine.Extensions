@@ -195,4 +195,60 @@ public class RateLimitingHttpHandlerTests
         Assert.Equal(t2.TotalMilliseconds, (requests[3].Time - requests[1].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
         Assert.Equal(t2.TotalMilliseconds, (requests[5].Time - requests[3].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanSelectivelyDisableRateLimiting(bool defaultIsNull)
+    {
+        ServiceCollection services = new();
+
+        services.Configure<HttpClientRateLimiterOptions>(options =>
+        {
+            // These should have the same effect on the below requests
+            if (defaultIsNull)
+            {
+                options.TimeBetweenRequests = null;
+                options.TimeBetweenRequestsByHost.Add("example.org", TimeBetweenRequests);
+            }
+            else
+            {
+                options.TimeBetweenRequests = TimeBetweenRequests;
+                options.TimeBetweenRequestsByHost.Add("example.com", null);
+            }
+        });
+
+        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
+            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        var client = serviceProvider.GetRequiredService<HttpClient>();
+
+        await Task.WhenAll(
+            client.GetAsync("http://example.com/first"),
+            client.GetAsync("http://example.com/second"),
+            client.GetAsync("http://example.org/third"),
+            client.GetAsync("http://example.org/fourth"),
+            client.GetAsync("http://example.org/fifth"),
+            client.GetAsync("http://example.com/sixth")
+        );
+
+        Assert.Equal(6, requests.Count);
+
+        var first = requests.Single(r => r.Request.RequestUri == new Uri("http://example.com/first")).Time.TotalMilliseconds;
+        var second = requests.Single(r => r.Request.RequestUri == new Uri("http://example.com/second")).Time.TotalMilliseconds;
+        var third = requests.Single(r => r.Request.RequestUri == new Uri("http://example.org/third")).Time.TotalMilliseconds;
+        var fourth = requests.Single(r => r.Request.RequestUri == new Uri("http://example.org/fourth")).Time.TotalMilliseconds;
+        var fifth = requests.Single(r => r.Request.RequestUri == new Uri("http://example.org/fifth")).Time.TotalMilliseconds;
+        var sixth = requests.Single(r => r.Request.RequestUri == new Uri("http://example.com/sixth")).Time.TotalMilliseconds;
+
+        // All three .com's and the first .org happen at the same time
+        Assert.Equal(first, second, tolerance: MillisecondsTolerance);
+        Assert.Equal(first, third, tolerance: MillisecondsTolerance);
+        Assert.Equal(first, sixth, tolerance: MillisecondsTolerance);
+
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, fourth - first, tolerance: MillisecondsTolerance);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, fifth - fourth, tolerance: MillisecondsTolerance);
+    }
 }

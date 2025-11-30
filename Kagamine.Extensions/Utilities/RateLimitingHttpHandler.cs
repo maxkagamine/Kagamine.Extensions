@@ -15,11 +15,11 @@ namespace Kagamine.Extensions.Utilities;
 /// </remarks>
 public sealed class RateLimitingHttpHandler : DelegatingHandler
 {
-    private readonly PartitionedRateLimiter<HttpRequestMessage> rateLimiter;
+    private readonly PartitionedRateLimiter<string> rateLimiter;
     private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
 
     internal RateLimitingHttpHandler(
-        PartitionedRateLimiter<HttpRequestMessage> rateLimiter,
+        PartitionedRateLimiter<string> rateLimiter,
         Func<HttpClientRateLimiterOptions> optionsAccessor)
     {
         this.rateLimiter = rateLimiter;
@@ -28,7 +28,16 @@ public sealed class RateLimitingHttpHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        RateLimitLease lease = await rateLimiter.AcquireAsync(request, permitCount: 1, cancellationToken);
+        HttpClientRateLimiterOptions options = optionsAccessor();
+        string host = request.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "";
+
+        if (options.TimeBetweenRequestsByHost.GetValueOrDefault(host, options.TimeBetweenRequests) is not TimeSpan timeBetweenRequests)
+        {
+            // Host is not rate limited
+            return await base.SendAsync(request, cancellationToken);
+        }
+
+        RateLimitLease lease = await rateLimiter.AcquireAsync(host, permitCount: 1, cancellationToken);
 
         try
         {
@@ -38,10 +47,6 @@ public sealed class RateLimitingHttpHandler : DelegatingHandler
         {
             _ = Task.Run(async () =>
             {
-                HttpClientRateLimiterOptions options = optionsAccessor();
-                string host = request.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "";
-                TimeSpan timeBetweenRequests = options.TimeBetweenRequestsByHost.GetValueOrDefault(host, options.TimeBetweenRequests);
-
                 await Task.Delay(timeBetweenRequests);
                 lease.Dispose();
             }, CancellationToken.None);

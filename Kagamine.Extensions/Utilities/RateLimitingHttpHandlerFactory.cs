@@ -26,10 +26,10 @@ public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposab
 {
     private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
 
-    private readonly PartitionedRateLimiter<HttpRequestMessage> rateLimiter =
-        PartitionedRateLimiter.Create((HttpRequestMessage req) =>
+    private readonly PartitionedRateLimiter<string> rateLimiter =
+        PartitionedRateLimiter.Create((string host) =>
             RateLimitPartition.GetConcurrencyLimiter(
-                partitionKey: req.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "",
+                partitionKey: host,
                 factory: _ => new ConcurrencyLimiterOptions()
                 {
                     PermitLimit = 1,

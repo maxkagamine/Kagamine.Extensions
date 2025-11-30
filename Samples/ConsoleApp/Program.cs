@@ -20,8 +20,10 @@ builder.Services.AddSerilog(config => config
     .WriteTo.Console(new ExpressionTemplate(
         "{#if SourceContext is not null}[{SourceContext}] {#end}{@m}\n{@x}", theme: TemplateTheme.Code)));
 
+// Kagamine.Extensions.Utilities.RateLimitingHttpHandler(Factory)
 builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiter();
 
+// Kagamine.Extensions.IO.TemporaryFileProvider
 builder.Services.AddTemporaryFileProvider();
 
 // Kagamine.Extensions.Hosting.ConsoleApplicationExtensions.Run() (see Kagamine.Extensions.Generator)
