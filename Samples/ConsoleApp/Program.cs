@@ -81,7 +81,7 @@ builder.Run(async (
             JsonSerializer.Serialize(tempFileStream, new { data });
         }
 
-        return tempFile.OpenRead(deleteWhenClosed: true);
+        return tempFile.OpenRead();
     }
 });
 

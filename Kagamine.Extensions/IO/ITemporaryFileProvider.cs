@@ -8,13 +8,27 @@ public interface ITemporaryFileProvider : IDisposable
     /// <summary>
     /// Creates a temporary file.
     /// </summary>
-    /// <returns>A <see cref="TemporaryFile"/> class which deletes the file when disposed.</returns>
+    /// <returns>
+    /// A <see cref="TemporaryFile"/> class which deletes the file when it and all streams have been disposed.
+    /// </returns>
     TemporaryFile Create();
 
     /// <summary>
     /// Creates a temporary file.
     /// </summary>
     /// <param name="suffix">A suffix to append to the file name.</param>
-    /// <returns>A <see cref="TemporaryFile"/> class which deletes the file when disposed.</returns>
+    /// <returns>
+    /// A <see cref="TemporaryFile"/> class which deletes the file when it and all streams have been disposed.
+    /// </returns>
     TemporaryFile Create(string suffix);
+
+    /// <summary>
+    /// Creates a temporary file.
+    /// </summary>
+    /// <param name="prefix">A prefix to prepend to the file name.</param>
+    /// <param name="suffix">A suffix to append to the file name.</param>
+    /// <returns>
+    /// A <see cref="TemporaryFile"/> class which deletes the file when it and all streams have been disposed.
+    /// </returns>
+    TemporaryFile Create(string prefix, string suffix);
 }

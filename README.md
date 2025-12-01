@@ -2,6 +2,8 @@
 
 This repository contains a suite of libraries that provide facilities commonly needed when creating production-ready applications. (As Microsoft puts it.)
 
+Human-coded, as with all of my work.
+
 - [Hosting](#hosting)
   - [ConsoleApplication.CreateBuilder()](#consoleapplicationcreatebuilder)
 - [Collections](#collections)
@@ -112,11 +114,11 @@ To deserialize an array as ValueArray&lt;T&gt; (as System.Text.Json cannot nativ
 
 Provides a number of advantages for working with temp files over `Path.GetTempFileName()`:
 
-- Unlike `GetTempFileName()`, it's possible to specify a file extension or suffix, which may be necessary when passing the file path to certain programs (unlike common solutions on Stack Overflow, it guarantees that the file name is unique and avoids race conditions);
+- Unlike `GetTempFileName()`, it's possible to specify a file extension or suffix, which may be necessary when passing the file path to certain programs (and unlike common solutions on Stack Overflow, it guarantees that the file name is unique / avoids race conditions);
 - Temp files are stored in an application-specific directory which is removed if empty when the application quits;
 - The TemporaryFile can be placed in a `using` which will automatically clean up the temp file when disposed;
 - TemporaryFile _doesn't_ maintain an open handle to the file, which allows for the file path to be passed to other programs like ffmpeg which may overwrite or replace the file (and expect it to not be in use);
-- 👉 **Most importantly:** a method can return a FileStream backed by the temp file which automatically deletes the file when the stream is closed — this works even when the TemporaryFile itself is in a `using`, simplifying common error handling patterns such as:
+- 👉 **Most importantly:** TemporaryFile keeps a ref count and only deletes the file once it and all streams have been disposed, which means a method can return a FileStream backed by the temp file and not have to worry about cleanup, vastly simplifying common error handling patterns such as:
 
 ```cs
 public async Task<Stream> ConvertToOpus(Stream inputStream, CancellationToken cancellationToken)
@@ -138,9 +140,17 @@ public async Task<Stream> ConvertToOpus(Stream inputStream, CancellationToken ca
     // If it succeeds, the input file is deleted, but the output file remains on
     // disk until the returned stream is closed, at which point the remaining
     // temp file will be cleaned up automatically.
-    return outputFile.OpenRead(deleteWhenClosed: true);
+    return outputFile.OpenRead();
 }
 ```
+
+ITemporaryFileProvider is added to the service container like so:
+
+```cs
+services.AddTemporaryFileProvider();
+```
+
+Or you can construct a TemporaryFileProvider yourself if not using DI. The temp directory and base filename format (by default a guid) can be changed via the options (see its overloads).
 
 ## Logging
 

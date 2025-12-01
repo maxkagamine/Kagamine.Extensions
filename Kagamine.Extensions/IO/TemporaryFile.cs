@@ -1,30 +1,34 @@
 // Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
+using System.Diagnostics;
+
 namespace Kagamine.Extensions.IO;
 
 /// <summary>
-/// A temporary file which will be deleted when disposed.
+/// A temporary file which will be deleted when the <see cref="TemporaryFile"/> and all streams have been disposed.
 /// </summary>
 public sealed class TemporaryFile : IDisposable
 {
-    private bool hasDeleteWhenClosedStream;
+    private volatile int refCount = 1;
     private bool isDisposed;
+    private readonly string path;
 
     internal TemporaryFile(string path)
     {
-        Path = path;
+        this.path = path;
     }
 
     /// <summary>
     /// The absolute path to the temporary file.
     /// </summary>
+    /// <exception cref="ObjectDisposedException"/>
     public string Path
     {
         get
         {
-            CheckIfDisposed();
-            return field;
+            ObjectDisposedException.ThrowIf(isDisposed, this);
+            return path;
         }
     }
 
@@ -33,48 +37,55 @@ public sealed class TemporaryFile : IDisposable
     /// </summary>
     /// <param name="access">Determines whether to open the file for reading, writing, or both.</param>
     /// <param name="share">Determines how the file will be shared with other processes.</param>
-    /// <param name="deleteWhenClosed">Whether to delete the temporary file when the stream is closed.</param>
-    /// <returns>A <see cref="FileStream"/>. If <paramref name="deleteWhenClosed"/> is <see langword="false"/>, the
-    /// caller is responsible for disposing the stream prior to disposing the <see cref="TemporaryFile"/>. Otherwise,
-    /// the <see cref="TemporaryFile"/> can be safely disposed or thrown away, as the returned stream will take care of
-    /// cleaning up the file.</returns>
-    public FileStream Open(FileAccess access, FileShare share, bool deleteWhenClosed = false)
+    /// <remarks>
+    /// The temporary file will remain on disk until the <see cref="TemporaryFile"/> and all streams have been disposed.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    public FileStream Open(FileAccess access, FileShare share)
     {
-        CheckIfDisposed();
+        ObjectDisposedException.ThrowIf(isDisposed, this);
 
-        hasDeleteWhenClosedStream |= deleteWhenClosed;
+        int oldValue = refCount;
+        while (true)
+        {
+            ObjectDisposedException.ThrowIf(oldValue == 0, this);
 
-        // FileOptions.DeleteOnClose seems to conflict with FileShare.Read, so we override FileStream.Dispose() instead
-        return deleteWhenClosed ?
-            new TemporaryFileStream(this, access, share) :
-            new FileStream(Path, FileMode.Open, access, share);
+            int result = Interlocked.CompareExchange(ref refCount, oldValue + 1, oldValue);
+            if (result == oldValue)
+            {
+                break;
+            }
+
+            oldValue = result;
+        }
+
+        return new TemporaryFileStream(this, access, share);
     }
 
     /// <summary>
     /// Opens the file for reading.
     /// </summary>
-    /// <returns>A <see cref="FileStream"/>. If <paramref name="deleteWhenClosed"/> is <see langword="false"/>, the
-    /// caller is responsible for disposing the stream prior to disposing the <see cref="TemporaryFile"/>. Otherwise,
-    /// the <see cref="TemporaryFile"/> can be safely disposed or thrown away, as the returned stream will take care of
-    /// cleaning up the file.</returns>
-    public FileStream OpenRead(bool deleteWhenClosed = false) =>
-        Open(FileAccess.Read, FileShare.Read, deleteWhenClosed);
+    /// <remarks>
+    /// The temporary file will remain on disk until the <see cref="TemporaryFile"/> and all streams have been disposed.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    public FileStream OpenRead() => Open(FileAccess.Read, FileShare.Read);
 
     /// <summary>
     /// Opens the file for writing.
     /// </summary>
-    /// <returns>A <see cref="FileStream"/>. If <paramref name="deleteWhenClosed"/> is <see langword="false"/>, the
-    /// caller is responsible for disposing the stream prior to disposing the <see cref="TemporaryFile"/>. Otherwise,
-    /// the <see cref="TemporaryFile"/> can be safely disposed or thrown away, as the returned stream will take care of
-    /// cleaning up the file.</returns>
-    public FileStream OpenWrite(bool deleteWhenClosed = false) =>
-        Open(FileAccess.Write, FileShare.None, deleteWhenClosed);
+    /// <remarks>
+    /// The temporary file will remain on disk until the <see cref="TemporaryFile"/> and all streams have been disposed.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    public FileStream OpenWrite() => Open(FileAccess.Write, FileShare.None);
 
     /// <summary>
     /// Copies the contents of <paramref name="stream"/> to the temporary file.
     /// </summary>
     /// <param name="stream">The stream from which to copy.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <exception cref="ObjectDisposedException"/>
     public async Task CopyFromAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         await using var tempFileStream = OpenWrite();
@@ -82,39 +93,46 @@ public sealed class TemporaryFile : IDisposable
     }
 
     /// <summary>
-    /// Deletes the temporary file, unless any streams were opened with <c>deleteWhenClosed</c>.
+    /// Disposes the <see cref="TemporaryFile"/> preventing any additional streams from being opened. Deletes the file
+    /// if no there are no remaining streams.
     /// </summary>
     public void Dispose()
     {
-        if (!hasDeleteWhenClosedStream && !isDisposed)
+        if (!Interlocked.Exchange(ref isDisposed, true))
         {
-            File.Delete(Path);
-            isDisposed = true;
+            DecrementRefCount();
         }
     }
 
-    private void CheckIfDisposed()
+    private void DecrementRefCount()
     {
-        if (isDisposed)
+        Debug.Assert(refCount > 0);
+
+        if (Interlocked.Decrement(ref refCount) == 0)
         {
-            throw new InvalidOperationException("The temporary file has already been deleted.");
+            // This was the last ref, so we can safely delete the file now
+            File.Delete(path);
         }
     }
 
+    /// <inheritdoc cref="Path"/>
     public override string ToString() => Path;
 
-    private class TemporaryFileStream(TemporaryFile tempFile, FileAccess access, FileShare share)
-        : FileStream(tempFile.Path, FileMode.Open, access, share)
+    private class TemporaryFileStream : FileStream
     {
+        private TemporaryFile? tempFile;
+
+        public TemporaryFileStream(TemporaryFile tempFile, FileAccess access, FileShare share)
+            : base(tempFile.Path, FileMode.Open, access, share)
+        {
+            this.tempFile = tempFile;
+        }
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
 
-            if (!tempFile.isDisposed)
-            {
-                File.Delete(tempFile.Path);
-                tempFile.isDisposed = true;
-            }
+            Interlocked.Exchange(ref tempFile, null)?.DecrementRefCount();
         }
     }
 }

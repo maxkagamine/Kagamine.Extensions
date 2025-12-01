@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0
 
 using Kagamine.Extensions.IO;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Options;
 
@@ -93,29 +95,53 @@ public sealed class TemporaryFileProviderTests : IDisposable
     }
 
     [Fact]
-    public void CreatesTempFileWithSuffix()
+    public void CreatesTempFileWithCustomPrefixAndSuffix()
     {
-        string suffix = "-stuff.txt";
+        string prefix = "foo_";
+        string suffix = ".txt";
 
         TemporaryFileProvider provider = new(tempDirName);
-        TemporaryFile tempFile = provider.Create(suffix);
+        TemporaryFile tempFile = provider.Create(prefix, suffix);
 
         Assert.Equal(tempDirPath, Path.GetDirectoryName(tempFile.Path));
-        Assert.EndsWith(suffix, tempFile.Path);
-        Assert.True(Guid.TryParse(Path.GetFileName(tempFile.Path)[..^suffix.Length], out _));
+
+        string filename = Path.GetFileName(tempFile.Path);
+        Assert.StartsWith(prefix, filename);
+        Assert.EndsWith(suffix, filename);
+        Assert.True(Guid.TryParse(filename[prefix.Length..^suffix.Length], out _));
     }
 
     [Fact]
     public void LoopsWhileFileNameExists()
     {
-        IncrementingTemporaryFileProvider provider = new(tempDirName);
+        ServiceCollection services = new();
+
+        services.AddSingleton<IHostEnvironment, HostingEnvironment>(_ => new() { ApplicationName = tempDirName });
+
+        services.AddTemporaryFileProvider(options =>
+        {
+            int i = 1;
+            options.CreateBaseFileName = () => i++.ToString();
+        });
+
+        IServiceProvider serviceProvider = services.BuildServiceProvider();
+        using ITemporaryFileProvider tempFileProvider = serviceProvider.GetRequiredService<ITemporaryFileProvider>();
 
         File.Create(Path.Combine(tempDirPath, "1.tmp")).Dispose();
         File.Create(Path.Combine(tempDirPath, "2.tmp")).Dispose();
         File.Create(Path.Combine(tempDirPath, "3.tmp")).Dispose();
 
-        TemporaryFile tempFile = provider.Create();
+        TemporaryFile tempFile = tempFileProvider.Create();
 
         Assert.Equal(Path.Combine(tempDirPath, "4.tmp"), tempFile.Path);
+    }
+
+    [Fact]
+    public void OmitsSubdirectoryIfEmptyString()
+    {
+        TemporaryFileProvider provider = new("");
+        using TemporaryFile tempFile = provider.Create($"_{nameof(TemporaryFileProviderTests)}.tmp");
+
+        Assert.Equal(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar), Path.GetDirectoryName(tempFile.Path));
     }
 }
