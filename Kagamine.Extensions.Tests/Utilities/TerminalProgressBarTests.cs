@@ -8,17 +8,12 @@ namespace Kagamine.Extensions.Tests.Utilities;
 
 public class TerminalProgressBarTests
 {
-    private readonly StringBuilder stdout = new();
-    private readonly TerminalProgressBar progress;
-
-    public TerminalProgressBarTests()
-    {
-        progress = new TerminalProgressBar(new StringWriter(stdout));
-    }
-
     [Fact]
     public void SendsCorrectEscapeSequences()
     {
+        StringBuilder stdout = new();
+        TerminalProgressBar progress = new(new StringWriter(stdout));
+
         Assert.Equal("\x1b]9;4;1;0\x07", stdout.ToString());
 
         stdout.Clear();

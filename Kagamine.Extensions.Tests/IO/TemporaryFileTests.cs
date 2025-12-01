@@ -86,6 +86,7 @@ public sealed class TemporaryFileTests : IDisposable
         Assert.False(File.Exists(path));
     }
 
+#pragma warning disable
     [Fact]
     public void CanBeDisposedWhileStreamIsOpen()
     {
@@ -111,6 +112,7 @@ public sealed class TemporaryFileTests : IDisposable
         // File was not deleted, and nothing threw
         Assert.True(File.Exists(path));
     }
+#pragma warning restore
 
     [Fact]
     public void DisposingTwiceCantDeleteADifferentTempFile()

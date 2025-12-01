@@ -44,7 +44,7 @@ public sealed class ConsoleApplication : IHost
 
         // Using the unhandled exception handler instead of a try-catch so that the debugger breaks on unhandled
         // exceptions without needing to set it to break on every thrown exception (which can be annoying)
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
         {
             logger.LogCritical((Exception)e.ExceptionObject, "Unhandled exception.");
 

@@ -11,6 +11,7 @@ namespace Kagamine.Extensions.Utilities;
 /// </remarks>
 public sealed class TerminalProgressBar : IDisposable
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "One does not simply dispose of stdout")]
     private readonly TextWriter? writer;
 
     public TerminalProgressBar()

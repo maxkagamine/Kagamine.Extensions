@@ -8,7 +8,7 @@ namespace Kagamine.Extensions.Utilities;
 
 public static class DependencyInjectionExtensions
 {
-    extension (IHttpClientBuilder builder)
+    extension(IHttpClientBuilder builder)
     {
         /// <summary>
         /// Adds a <see cref="RateLimitingHttpHandler"/> to this client which forces requests to the same host to wait

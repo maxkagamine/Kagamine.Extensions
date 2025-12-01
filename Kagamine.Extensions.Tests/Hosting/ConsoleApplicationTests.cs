@@ -30,7 +30,7 @@ public class ConsoleApplicationTests
 
         var builder = ConsoleApplication.CreateBuilder();
         builder.Services.AddHostedService(_ => hostedService.Object);
-        builder.Run((CancellationToken _) =>
+        builder.Run(_ =>
         {
             hostedService.Verify(x => x.StartAsync(It.IsAny<CancellationToken>()));
             hostedService.VerifyNoOtherCalls();
@@ -45,7 +45,7 @@ public class ConsoleApplicationTests
         var host = ConsoleApplication.CreateBuilder().Build();
         var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
 
-        host.Run((CancellationToken cancellationToken) =>
+        host.Run(cancellationToken =>
         {
             Assert.True(lifetime.ApplicationStarted.IsCancellationRequested);
             Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);

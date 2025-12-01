@@ -19,7 +19,7 @@ public class ValueArrayTests
         ValueArray<int> foos = new[] { 1, 2, 3 };
         int[] bars = (int[])foos;
 
-        Assert.Equal(new[] { 1, 2, 3 }, bars);
+        Assert.Equal([1, 2, 3], bars);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class ValueArrayTests
         ValueArray<int> foos = [1, 2, 3]; // Compiler uses a span and calls ValueArray.Create<T>(ReadOnlySpan<T>)
         ReadOnlySpan<int> bars = foos;
 
-        Assert.Equal(new[] { 1, 2, 3 }, bars);
+        Assert.Equal([1, 2, 3], bars);
     }
 
     [Fact]

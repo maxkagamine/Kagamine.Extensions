@@ -64,6 +64,12 @@ indent_size = 4
 indent_style = space
 insert_final_newline = true
 tab_width = 4
+dotnet_diagnostic.CA1001.severity = warning
+dotnet_diagnostic.CA2215.severity = warning
+dotnet_diagnostic.CA2213.severity = warning
+dotnet_diagnostic.CA2216.severity = warning
+dotnet_diagnostic.CA1063.severity = warning
+dotnet_diagnostic.IDE0305.severity = none
 
 file_header_template = Copyright (c) Max Kagamine\nLicensed under the Apache License, Version 2.0
 
