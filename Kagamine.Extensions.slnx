@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Samples/">
+    <Project Path="Samples/ConsoleApp/ConsoleApp.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+  </Folder>
+  <Project Path="Kagamine.Extensions.EntityFramework/Kagamine.Extensions.EntityFramework.csproj" />
+  <Project Path="Kagamine.Extensions.Generator/Kagamine.Extensions.Generator.csproj" />
+  <Project Path="Kagamine.Extensions.Tests/Kagamine.Extensions.Tests.csproj" />
+  <Project Path="Kagamine.Extensions/Kagamine.Extensions.csproj" />
+</Solution>
