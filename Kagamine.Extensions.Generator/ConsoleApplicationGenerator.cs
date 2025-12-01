@@ -2,14 +2,24 @@
 // Licensed under the Apache License, Version 2.0
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using System.Text;
 
 namespace Kagamine.Extensions.Generator;
 
 [Generator]
-public class ConsoleApplicationGenerator : ISourceGenerator
+public class ConsoleApplicationGenerator : IIncrementalGenerator
 {
-    public void Execute(GeneratorExecutionContext context)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        context.RegisterPostInitializationOutput(ctx =>
+        {
+            string source = CreateSourceFile();
+            ctx.AddSource("ConsoleApplicationExtensions.g.cs", SourceText.From(source, Encoding.UTF8));
+        });
+    }
+
+    public string CreateSourceFile()
     {
         var source = new StringBuilder();
 
@@ -45,7 +55,7 @@ public class ConsoleApplicationGenerator : ISourceGenerator
 
         source.AppendLine("}");
 
-        context.AddSource("ConsoleApplicationExtensions.g.cs", source.ToString());
+        return source.ToString();
     }
 
     private static string[] StartMethod(StringBuilder method, string extend, int paramCount, bool isAsync, bool returnsInt)
@@ -132,7 +142,4 @@ public class ConsoleApplicationGenerator : ISourceGenerator
 
         return method.ToString();
     }
-
-    public void Initialize(GeneratorInitializationContext context)
-    { }
 }
