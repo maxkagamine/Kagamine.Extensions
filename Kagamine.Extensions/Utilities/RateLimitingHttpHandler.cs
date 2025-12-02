@@ -11,16 +11,16 @@ namespace Kagamine.Extensions.Utilities;
 /// </summary>
 /// <remarks>
 /// This type cannot be constructed directly. See <see cref="RateLimitingHttpHandlerFactory"/> and <see
-/// cref="DependencyInjectionExtensions.AddRateLimiter(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
+/// cref="DependencyInjectionExtensions.AddRateLimiting(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
 /// </remarks>
 public sealed class RateLimitingHttpHandler : DelegatingHandler
 {
     private readonly PartitionedRateLimiter<string> rateLimiter;
-    private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
+    private readonly Func<RateLimitingHttpHandlerOptions> optionsAccessor;
 
     internal RateLimitingHttpHandler(
         PartitionedRateLimiter<string> rateLimiter,
-        Func<HttpClientRateLimiterOptions> optionsAccessor)
+        Func<RateLimitingHttpHandlerOptions> optionsAccessor)
     {
         this.rateLimiter = rateLimiter;
         this.optionsAccessor = optionsAccessor;
@@ -28,7 +28,7 @@ public sealed class RateLimitingHttpHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        HttpClientRateLimiterOptions options = optionsAccessor();
+        RateLimitingHttpHandlerOptions options = optionsAccessor();
         string host = request.RequestUri is Uri { IsAbsoluteUri: true } uri ? uri.Host : "";
 
         if (options.TimeBetweenRequestsByHost.GetValueOrDefault(host, options.TimeBetweenRequests) is not TimeSpan timeBetweenRequests)

@@ -21,7 +21,7 @@ builder.Services.AddSerilog(config => config
         "{#if SourceContext is not null}[{SourceContext}] {#end}{@m}\n{@x}", theme: TemplateTheme.Code)));
 
 // Kagamine.Extensions.Utilities.RateLimitingHttpHandler(Factory)
-builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiter();
+builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiting();
 
 // Kagamine.Extensions.IO.TemporaryFileProvider
 builder.Services.AddTemporaryFileProvider();

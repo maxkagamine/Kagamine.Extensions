@@ -3,7 +3,7 @@
 
 namespace Kagamine.Extensions.Utilities;
 
-public sealed class HttpClientRateLimiterOptions
+public sealed class RateLimitingHttpHandlerOptions
 {
     /// <summary>
     /// <para>

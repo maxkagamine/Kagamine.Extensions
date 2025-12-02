@@ -14,7 +14,7 @@ namespace Kagamine.Extensions.Utilities;
 /// <remarks>
 /// <para>
 ///     To use with dependency injection, see <see
-///     cref="DependencyInjectionExtensions.AddRateLimiter(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
+///     cref="DependencyInjectionExtensions.AddRateLimiting(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder)"/>.
 /// </para>
 /// <para>
 ///     This factory is necessary as the Microsoft.Extensions.Http infrastructure rotates inner handlers and expects the
@@ -24,7 +24,7 @@ namespace Kagamine.Extensions.Utilities;
 /// </remarks>
 public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposable
 {
-    private readonly Func<HttpClientRateLimiterOptions> optionsAccessor;
+    private readonly Func<RateLimitingHttpHandlerOptions> optionsAccessor;
 
     private readonly PartitionedRateLimiter<string> rateLimiter =
         PartitionedRateLimiter.Create((string host) =>
@@ -41,13 +41,13 @@ public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposab
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> with default options.
     /// </summary>
-    public RateLimitingHttpHandlerFactory() : this(new HttpClientRateLimiterOptions())
+    public RateLimitingHttpHandlerFactory() : this(new RateLimitingHttpHandlerOptions())
     { }
 
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> with the specified options.
     /// </summary>
-    public RateLimitingHttpHandlerFactory(HttpClientRateLimiterOptions options)
+    public RateLimitingHttpHandlerFactory(RateLimitingHttpHandlerOptions options)
     {
         optionsAccessor = () => options;
     }
@@ -55,7 +55,7 @@ public sealed class RateLimitingHttpHandlerFactory : IAsyncDisposable, IDisposab
     /// <summary>
     /// Creates a new <see cref="RateLimitingHttpHandlerFactory"/> via dependency injection.
     /// </summary>
-    public RateLimitingHttpHandlerFactory(IOptionsMonitor<HttpClientRateLimiterOptions> options)
+    public RateLimitingHttpHandlerFactory(IOptionsMonitor<RateLimitingHttpHandlerOptions> options)
     {
         optionsAccessor = () => options.CurrentValue;
     }

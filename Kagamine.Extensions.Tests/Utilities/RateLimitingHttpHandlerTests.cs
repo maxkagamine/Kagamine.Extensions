@@ -27,8 +27,8 @@ public class RateLimitingHttpHandlerTests
 
         ServiceCollection services = new();
 
-        services.Configure<HttpClientRateLimiterOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
-        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+        services.Configure<RateLimitingHttpHandlerOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting()
            .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -117,12 +117,12 @@ public class RateLimitingHttpHandlerTests
     {
         ServiceCollection services = new();
 
-        services.Configure<HttpClientRateLimiterOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
+        services.Configure<RateLimitingHttpHandlerOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
 
-        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
+        services.AddHttpClient(Options.DefaultName).AddRateLimiting()
             .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
 
-        services.AddHttpClient("foo").AddRateLimiter()
+        services.AddHttpClient("foo").AddRateLimiting()
             .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -150,13 +150,13 @@ public class RateLimitingHttpHandlerTests
         TimeSpan t1 = TimeSpan.FromMilliseconds(450);
         TimeSpan t2 = TimeSpan.FromMilliseconds(700);
 
-        services.Configure<HttpClientRateLimiterOptions>(options =>
+        services.Configure<RateLimitingHttpHandlerOptions>(options =>
         {
             options.TimeBetweenRequests = t1;
             options.TimeBetweenRequestsByHost.Add("example.org", t2);
         });
 
-        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting()
            .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -203,7 +203,7 @@ public class RateLimitingHttpHandlerTests
     {
         ServiceCollection services = new();
 
-        services.Configure<HttpClientRateLimiterOptions>(options =>
+        services.Configure<RateLimitingHttpHandlerOptions>(options =>
         {
             // These should have the same effect on the below requests
             if (defaultIsNull)
@@ -218,7 +218,7 @@ public class RateLimitingHttpHandlerTests
             }
         });
 
-        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting()
            .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -257,17 +257,17 @@ public class RateLimitingHttpHandlerTests
     {
         ServiceCollection services = new();
 
-        services.Configure<HttpClientRateLimiterOptions>(options =>
+        services.Configure<RateLimitingHttpHandlerOptions>(options =>
         {
             options.TimeBetweenRequests = TimeBetweenRequests;
         });
 
         // Suppose the main project configures rate limiting for all clients
-        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting()
             .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         // But a library also configures rate limiting for its own client
-        services.AddHttpClient("foo").AddRateLimiter()
+        services.AddHttpClient("foo").AddRateLimiting()
             .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -289,7 +289,7 @@ public class RateLimitingHttpHandlerTests
     [Fact]
     public async Task CanUseWithoutDI()
     {
-        using RateLimitingHttpHandlerFactory rateLimiterFactory = new(new HttpClientRateLimiterOptions()
+        using RateLimitingHttpHandlerFactory rateLimiterFactory = new(new RateLimitingHttpHandlerOptions()
         {
             TimeBetweenRequests = TimeBetweenRequests,
         });

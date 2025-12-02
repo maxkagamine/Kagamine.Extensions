@@ -16,10 +16,10 @@ public static class DependencyInjectionExtensions
         /// </summary>
         /// <remarks>
         /// The rate limiter is shared across all named clients. Use <c>services.Configure&lt;<see
-        /// cref="HttpClientRateLimiterOptions"/>&gt;()</c> to change the default time between requests or set different
-        /// rate limits per host.
+        /// cref="RateLimitingHttpHandlerOptions"/>&gt;()</c> to change the default time between requests or set
+        /// different rate limits per host.
         /// </remarks>
-        public IHttpClientBuilder AddRateLimiter()
+        public IHttpClientBuilder AddRateLimiting()
         {
             builder.Services.TryAddSingleton<RateLimitingHttpHandlerFactory>();
 
