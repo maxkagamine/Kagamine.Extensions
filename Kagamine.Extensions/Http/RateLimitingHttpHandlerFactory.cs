@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 
-namespace Kagamine.Extensions.Utilities;
+namespace Kagamine.Extensions.Http;
 
 /// <summary>
 /// Factory for creating <see cref="RateLimitingHttpHandler"/> instances which force requests to the same host to wait

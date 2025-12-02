@@ -3,7 +3,7 @@
 
 using System.Threading.RateLimiting;
 
-namespace Kagamine.Extensions.Utilities;
+namespace Kagamine.Extensions.Http;
 
 /// <summary>
 /// A <see cref="DelegatingHandler"/> that forces requests to the same host to wait for a configured period of time

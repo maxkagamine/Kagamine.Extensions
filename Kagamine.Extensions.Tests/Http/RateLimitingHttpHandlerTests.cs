@@ -1,7 +1,7 @@
 // Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
-using Kagamine.Extensions.Utilities;
+using Kagamine.Extensions.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -9,7 +9,7 @@ using Moq.Contrib.HttpClient;
 using System.Diagnostics;
 using System.Net;
 
-namespace Kagamine.Extensions.Tests.Utilities;
+namespace Kagamine.Extensions.Tests.Http;
 
 public class RateLimitingHttpHandlerTests
 {

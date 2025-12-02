@@ -10,10 +10,11 @@ Human-coded, as with all of my work.
   - [ValueArray\<T\>](#valuearrayt)
 - [IO](#io)
   - [TemporaryFileProvider](#temporaryfileprovider)
+- [Http](#http)
+  - [RateLimitingHttpHandler](#ratelimitinghttphandler)
 - [Logging](#logging)
   - [BeginTimedOperation](#begintimedoperation)
 - [Utilities](#utilities)
-  - [RateLimitingHttpHandler](#ratelimitinghttphandler)
   - [TerminalProgressBar](#terminalprogressbar)
 - [EntityFramework](#entityframework)
   - [Update\<T\>(this DbSet\<T\> set, T entity, T valuesFrom)](#updatetthis-dbsett-set-t-entity-t-valuesfrom)
@@ -152,6 +153,47 @@ services.AddTemporaryFileProvider();
 
 Or you can construct a TemporaryFileProvider yourself if not using DI. The temp directory and base filename format (by default a guid) can be changed via the options (see its overloads).
 
+## Http
+
+### RateLimitingHttpHandler
+
+A DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request:
+
+```cs
+// Add the rate limiter to all HttpClients
+builder.Services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting());
+
+// In libraries, consider adding it only to your own named or typed client; the
+// rate limit won't stack even if the top-level project adds it to all clients
+builder.Services.AddHttpClient("foo").AddRateLimiting();
+
+// Alternatively, if not using DI
+using RateLimitingHttpHandlerFactory rateLimiterFactory = new();
+RateLimitingHttpHandler rateLimiter = rateLimiterFactory.CreateHandler();
+rateLimiter.InnerHandler = new HttpClientHandler();
+HttpClient client = new(rateLimiter);
+```
+
+When using DI, the per-host rate limit is shared across all named clients. This avoids accidentally hitting a host more frequently than intended simply because the code happens to use multiple clients.
+
+To change the default time between requests or set different rate limits per host:
+
+```cs
+builder.Services.Configure<RateLimitingHttpHandlerOptions>(options =>
+{
+    // Setting it to null disables rate limiting by default; can also leave rate
+    // limiting on by default and disable it for specific hosts instead.
+    // Libraries that need to enforce a particular rate limit to their APIs
+    // should avoid relying on the global TimeBetweenRequests.
+    options.TimeBetweenRequests = null;
+    options.TimeBetweenRequestsByHost.Add("example.com", TimeSpan.FromSeconds(5));
+});
+```
+
+Note that the timer starts _after_ the response has been received and returned to the caller, not before sending the request. Otherwise, slow responses and network latency could result in requests exhibiting effectively no rate limit.
+
+Run the sample [ConsoleApp](Samples/ConsoleApp/Program.cs) for a demo.
+
 ## Logging
 
 ### BeginTimedOperation
@@ -169,45 +211,6 @@ using (logger.BeginTimedOperation(nameof(DoStuff)))
 ```
 
 ## Utilities
-
-### RateLimitingHttpHandler
-
-A DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request:
-
-```cs
-// Add the rate limiter to all HttpClients
-builder.Services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter());
-
-// In libraries, consider adding it only to your own named or typed client; the
-// rate limit won't stack even if the top-level project adds it to all clients
-builder.Services.AddHttpClient("foo").AddRateLimiter();
-
-// Alternatively, if not using DI
-using RateLimitingHttpHandlerFactory rateLimiterFactory = new();
-RateLimitingHttpHandler rateLimiter = rateLimiterFactory.CreateHandler();
-rateLimiter.InnerHandler = new HttpClientHandler();
-HttpClient client = new(rateLimiter);
-```
-
-When using DI, the per-host rate limit is shared across all named clients. This avoids accidentally hitting a host more frequently than intended simply because the code happens to use multiple clients.
-
-To change the default time between requests or set different rate limits per host:
-
-```cs
-builder.Services.Configure<HttpClientRateLimiterOptions>(options =>
-{
-    // Setting it to null disables rate limiting by default; can also leave rate
-    // limiting on by default and disable it for specific hosts instead.
-    // Libraries that need to enforce a particular rate limit to their APIs
-    // should avoid relying on the global TimeBetweenRequests.
-    options.TimeBetweenRequests = null;
-    options.TimeBetweenRequestsByHost.Add("example.com", TimeSpan.FromSeconds(5));
-});
-```
-
-Note that the timer starts _after_ the response has been received and returned to the caller, not before sending the request. Otherwise, slow responses and network latency could result in requests exhibiting effectively no rate limit.
-
-Run the sample [ConsoleApp](Samples/ConsoleApp/Program.cs) for a demo.
 
 ### TerminalProgressBar
 

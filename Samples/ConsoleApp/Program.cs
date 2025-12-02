@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0
 
 using Kagamine.Extensions.Hosting;
+using Kagamine.Extensions.Http;
 using Kagamine.Extensions.IO;
 using Kagamine.Extensions.Logging;
 using Kagamine.Extensions.Utilities;

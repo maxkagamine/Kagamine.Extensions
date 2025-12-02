@@ -1,10 +1,11 @@
 // Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
+using Kagamine.Extensions.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Kagamine.Extensions.Utilities;
+namespace Kagamine.Extensions.Http;
 
 public static class DependencyInjectionExtensions
 {

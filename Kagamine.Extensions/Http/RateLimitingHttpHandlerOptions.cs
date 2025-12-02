@@ -1,7 +1,7 @@
 // Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
-namespace Kagamine.Extensions.Utilities;
+namespace Kagamine.Extensions.Http;
 
 public sealed class RateLimitingHttpHandlerOptions
 {
