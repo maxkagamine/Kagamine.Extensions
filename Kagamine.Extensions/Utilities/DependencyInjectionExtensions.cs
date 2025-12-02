@@ -22,7 +22,20 @@ public static class DependencyInjectionExtensions
         public IHttpClientBuilder AddRateLimiter()
         {
             builder.Services.TryAddSingleton<RateLimitingHttpHandlerFactory>();
-            builder.AddHttpMessageHandler(provider => provider.GetRequiredService<RateLimitingHttpHandlerFactory>().CreateHandler());
+
+            builder.ConfigureAdditionalHttpMessageHandlers((handlers, provider) =>
+            {
+                // Avoid adding two rate limiters to the chain, which would cause a deadlock
+                // (see RateLimitingHttpHandlerTests.PreventsDuplicateHandler)
+                if (handlers.Any(h => h is RateLimitingHttpHandler))
+                {
+                    return;
+                }
+
+                var handler = provider.GetRequiredService<RateLimitingHttpHandlerFactory>().CreateHandler();
+                handlers.Add(handler);
+            });
+
             return builder;
         }
     }

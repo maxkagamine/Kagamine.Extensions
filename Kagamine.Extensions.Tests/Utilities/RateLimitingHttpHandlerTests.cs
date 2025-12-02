@@ -28,8 +28,8 @@ public class RateLimitingHttpHandlerTests
         ServiceCollection services = new();
 
         services.Configure<HttpClientRateLimiterOptions>(options => options.TimeBetweenRequests = TimeBetweenRequests);
-        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
-            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+           .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -156,8 +156,8 @@ public class RateLimitingHttpHandlerTests
             options.TimeBetweenRequestsByHost.Add("example.org", t2);
         });
 
-        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
-            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+           .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -218,8 +218,8 @@ public class RateLimitingHttpHandlerTests
             }
         });
 
-        services.AddHttpClient(Options.DefaultName).AddRateLimiter()
-            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+           .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -250,5 +250,60 @@ public class RateLimitingHttpHandlerTests
 
         Assert.Equal(TimeBetweenRequests.TotalMilliseconds, fourth - first, tolerance: MillisecondsTolerance);
         Assert.Equal(TimeBetweenRequests.TotalMilliseconds, fifth - fourth, tolerance: MillisecondsTolerance);
+    }
+
+    [Fact]
+    public async Task PreventsDuplicateHandler()
+    {
+        ServiceCollection services = new();
+
+        services.Configure<HttpClientRateLimiterOptions>(options =>
+        {
+            options.TimeBetweenRequests = TimeBetweenRequests;
+        });
+
+        // Suppose the main project configures rate limiting for all clients
+        services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter()
+            .ConfigurePrimaryHttpMessageHandler(() => handler.Object));
+
+        // But a library also configures rate limiting for its own client
+        services.AddHttpClient("foo").AddRateLimiter()
+            .ConfigurePrimaryHttpMessageHandler(() => handler.Object);
+
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        var client = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("foo");
+
+        // If we simply used AddHttpMessageHandler, this would end up with two rate limiters which would deadlock
+        CancellationTokenSource cts = new(TimeSpan.FromSeconds(2));
+
+        await Task.WhenAll(
+            client.GetAsync("http://example.com/first", cts.Token),
+            client.GetAsync("https://example.com/second", cts.Token)
+        );
+
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[1].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
+    }
+
+    [Fact]
+    public async Task CanUseWithoutDI()
+    {
+        using RateLimitingHttpHandlerFactory rateLimiterFactory = new(new HttpClientRateLimiterOptions()
+        {
+            TimeBetweenRequests = TimeBetweenRequests,
+        });
+
+        RateLimitingHttpHandler rateLimiter = rateLimiterFactory.CreateHandler();
+        rateLimiter.InnerHandler = handler.Object;
+        HttpClient client = new(rateLimiter);
+
+        await Task.WhenAll(
+            client.GetAsync("http://example.com/first"),
+            client.GetAsync("https://example.com/second")
+        );
+
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(TimeBetweenRequests.TotalMilliseconds, (requests[1].Time - requests[0].Time).TotalMilliseconds, tolerance: MillisecondsTolerance);
     }
 }
