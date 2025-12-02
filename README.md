@@ -175,21 +175,37 @@ using (logger.BeginTimedOperation(nameof(DoStuff)))
 A DelegatingHandler that uses [System.Threading.RateLimiting](https://devblogs.microsoft.com/dotnet/announcing-rate-limiting-for-dotnet/) to force requests to the same host to wait for a configured period of time since the last request completed before sending a new request:
 
 ```cs
-builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiter();
-// You can construct the handler manually if not using DI; see RateLimitingHttpHandlerFactory
+// Add the rate limiter to all HttpClients
+builder.Services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiter());
+
+// In libraries, consider adding it only to your own named or typed client; the
+// rate limit won't stack even if the top-level project adds it to all clients
+builder.Services.AddHttpClient("foo").AddRateLimiter();
+
+// Alternatively, if not using DI
+using RateLimitingHttpHandlerFactory rateLimiterFactory = new();
+RateLimitingHttpHandler rateLimiter = rateLimiterFactory.CreateHandler();
+rateLimiter.InnerHandler = new HttpClientHandler();
+HttpClient client = new(rateLimiter);
 ```
 
-The per-host rate limit is shared across all named clients that have `AddRateLimiter()` applied. To change the default time between requests or set different rate limits per host:
+When using DI, the per-host rate limit is shared across all named clients. This avoids accidentally hitting a host more frequently than intended simply because the code happens to use multiple clients.
+
+To change the default time between requests or set different rate limits per host:
 
 ```cs
-builder.services.Configure<HttpClientRateLimiterOptions>(options =>
+builder.Services.Configure<HttpClientRateLimiterOptions>(options =>
 {
-    // Setting to null disables rate limiting by default; can also leave
-    // rate limiting on by default and disable it for specific hosts instead
+    // Setting it to null disables rate limiting by default; can also leave rate
+    // limiting on by default and disable it for specific hosts instead.
+    // Libraries that need to enforce a particular rate limit to their APIs
+    // should avoid relying on the global TimeBetweenRequests.
     options.TimeBetweenRequests = null;
     options.TimeBetweenRequestsByHost.Add("example.com", TimeSpan.FromSeconds(5));
 });
 ```
+
+Note that the timer starts _after_ the response has been received and returned to the caller, not before sending the request. Otherwise, slow responses and network latency could result in requests exhibiting effectively no rate limit.
 
 Run the sample [ConsoleApp](Samples/ConsoleApp/Program.cs) for a demo.
 
@@ -234,9 +250,12 @@ db.Foos.RemoveRange(existingEntities.Values);
 await db.SaveChangesAsync();
 ```
 
+> [!TIP]
+> If it makes sense for your application, consider using IDbContextFactory instead and [creating a new context for each unit of work](https://github.com/maxkagamine/Serifu.org/blob/master/Serifu.Data.Sqlite/SqliteService.cs). Doing so can avoid the sort of "[spooky action at a distance](https://en.wikipedia.org/wiki/Action_at_a_distance_(computer_programming))" (other parts of the code affecting the state of the change tracker unpredictably) that makes doing something like this necessary.
+
 ### ToHashSetAsync&lt;T&gt;()
 
-_.NET 8 only, as this was made official in EF 9._
+⚠ **Removed in v2.0.0, as this was made official in EF 9. Older projects can copy the method [from here](https://github.com/maxkagamine/Kagamine.Extensions/blob/v1.10.2/Kagamine.Extensions.EntityFramework/EntityFrameworkExtensions.cs).**
 
 Mirrors ToArrayAsync and ToListAsync. Implemented using `await foreach`, like the other two, making it slightly more performant than doing ToListAsync then ToHashSet :
 
