@@ -24,9 +24,7 @@ Human-coded, as with all of my work.
 
 ### ConsoleApplication.CreateBuilder()
 
-Tailors the [Generic Host](https://learn.microsoft.com/en-us/dotnet/core/extensions/generic-host) framework for console apps as WebApplication does for ASP.NET Core. Using IHost is desirable for its dependency injection, logging, and configuration setup and consistency with web apps (not to mention EF Core migrations uses it to discover the DbContext), but the out-of-box experience is mainly designed for background workers which leads to some frustrations when trying to use it for a regular executable.
-
-Wanting to use a source generator to create the simplified `Run()` overloads (separate delegates for varying number of DI'd services × returning an exit code or not × being async or not = lots of overloads) was my main motivation for making this its own library.
+Tailors the [Generic Host](https://learn.microsoft.com/en-us/dotnet/core/extensions/generic-host) framework for console apps as WebApplication does for ASP.NET Core. Using IHost is desirable for its dependency injection, logging, and configuration setup as well as for consistency with web apps (not to mention EF Core migrations uses it to discover the DbContext), but the out-of-box experience is mainly designed for background workers which leads to some frustrations when trying to use it in a regular executable.
 
 Example Program.cs:
 
@@ -39,11 +37,21 @@ var builder = ConsoleApplication.CreateBuilder();
 builder.Services.AddDbContext<FooContext>();
 builder.Services.AddScoped<IFooService, FooService>();
 
+// May optionally be async and/or return an exit code
 builder.Run((IFooService fooService, CancellationToken cancellationToken) =>
 {
     fooService.DoStuff(cancellationToken);
 });
 ```
+
+Compared to repurposing IHostedService or BackgroundService to run a console app:
+
+- The entry point is much cleaner and more natural (reminiscent of minimal APIs)
+- `SIGINT`, `SIGQUIT`, and `SIGTERM` produce the correct exit codes (in background services, a Ctrl+C is supposed to trigger a "graceful" shutdown and exit with zero, which only makes sense for a long-lived worker or server)
+- Unhandled exceptions are the same as a regular console app, just going through the ILogger instead (not printed twice with a message for developers tacked on; services are also disposed to ensure logs are flushed)
+- Application lifetime events are properly handled (which a lot of IHostedService examples actually get wrong; implementing it correctly is surprisingly unintuitive, and it's not meant for this anyway)
+
+Several real-world examples of this being used can be found [in Serifu.org's projects](https://github.com/maxkagamine/Serifu.org/blob/master/Serifu.Importer.Skyrim/Program.cs).
 
 > [!NOTE]
 > ASP.NET Core projects include a launchSettings.json by default which sets the environment to "Development" in dev, but this [needs to be done manually](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments) for a console app. The easiest way in Visual Studio is to open Debug > {Project Name} Debug Properties and under Environment Variables add DOTNET_ENVIRONMENT = Development. Note that the `ASPNETCORE_` prefix won't work here, as it's not a WebApplication.
