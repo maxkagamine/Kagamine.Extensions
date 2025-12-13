@@ -8,8 +8,8 @@ namespace Kagamine.Extensions.Tests.Collections;
 
 public class JsonBase64ValueArrayConverterTests
 {
-    record Foo(ValueArray<Bar> Numbers, ValueArray<byte> Data);
-    readonly record struct Bar(ushort A, ushort B, ushort C, ushort D);
+    private sealed record Foo(ValueArray<Bar> Numbers, ValueArray<byte> Data);
+    private readonly record struct Bar(ushort A, ushort B, ushort C, ushort D);
 
     private static readonly JsonSerializerOptions Options = new()
     {

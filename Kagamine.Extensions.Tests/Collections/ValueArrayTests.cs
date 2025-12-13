@@ -10,8 +10,8 @@ namespace Kagamine.Extensions.Tests.Collections;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Bug in IDE analyzer")]
 public class ValueArrayTests
 {
-    record Person(string Surname, string GivenName);
-    readonly record struct Numbers(int A, int B);
+    private sealed record Person(string Surname, string GivenName);
+    private readonly record struct Numbers(int A, int B);
 
     [Fact]
     public void ConvertsToFromArray()

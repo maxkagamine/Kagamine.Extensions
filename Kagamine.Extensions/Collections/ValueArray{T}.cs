@@ -23,7 +23,7 @@ public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T
 {
     public static readonly ValueArray<T> Empty = default;
 
-    readonly T[]? array;
+    private readonly T[]? array;
 
     public ValueArray(T[] array)
     {
@@ -88,7 +88,7 @@ public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T
     #endregion
 }
 
-internal class ValueArrayDebugView<T>(ValueArray<T> array)
+internal sealed class ValueArrayDebugView<T>(ValueArray<T> array)
 {
     [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
     public T[] Items => (T[])array;

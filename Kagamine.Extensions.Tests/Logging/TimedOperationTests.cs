@@ -10,7 +10,7 @@ namespace Kagamine.Extensions.Tests.Logging;
 
 public class TimedOperationTests
 {
-    private class Sink(List<LogEvent> logEvents) : ILogEventSink
+    private sealed class Sink(List<LogEvent> logEvents) : ILogEventSink
     {
         public void Emit(LogEvent logEvent) => logEvents.Add(logEvent);
     }

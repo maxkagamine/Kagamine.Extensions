@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Kagamine.Extensions.Tests.IO;
 
@@ -121,7 +122,7 @@ public sealed class TemporaryFileProviderTests : IDisposable
         services.AddTemporaryFileProvider(options =>
         {
             int i = 1;
-            options.CreateBaseFileName = () => i++.ToString();
+            options.CreateBaseFileName = () => i++.ToString(CultureInfo.InvariantCulture);
         });
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();

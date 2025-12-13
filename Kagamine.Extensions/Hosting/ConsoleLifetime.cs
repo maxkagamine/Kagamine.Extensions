@@ -12,7 +12,7 @@ namespace Kagamine.Extensions.Hosting;
 /// received (the official stance seems to be that a "graceful" shutdown should exit with 0, which may make sense for a
 /// background service but not necessarily for a CLI / foreground app).
 /// </summary>
-internal class ConsoleLifetime : IHostLifetime
+internal sealed class ConsoleLifetime : IHostLifetime
 {
     private readonly IHostApplicationLifetime lifetime;
 

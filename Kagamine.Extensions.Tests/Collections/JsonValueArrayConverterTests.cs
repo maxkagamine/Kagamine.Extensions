@@ -1,4 +1,4 @@
-﻿// Copyright (c) Max Kagamine
+// Copyright (c) Max Kagamine
 // Licensed under the Apache License, Version 2.0
 
 using Kagamine.Extensions.Collections;
@@ -8,7 +8,7 @@ namespace Kagamine.Extensions.Tests.Collections;
 
 public class JsonValueArrayConverterTests
 {
-    private record Foo(string A, int B);
+    private sealed record Foo(string A, int B);
 
     private static readonly JsonSerializerOptions Options = new()
     {
