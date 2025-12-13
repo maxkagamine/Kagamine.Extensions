@@ -8,31 +8,30 @@ namespace Kagamine.Extensions.IO;
 
 public static class DependencyInjectionExtensions
 {
-    extension(IServiceCollection services)
+    /// <summary>
+    /// Adds an <see cref="ITemporaryFileProvider"/> using a subdirectory of the user's temp folder with the name of
+    /// the application (<see cref="IHostEnvironment.ApplicationName"/>, defaults to the assembly name). The
+    /// directory will be created if it does not exist, and will be removed when the <see
+    /// cref="TemporaryFileProvider"/> is disposed if empty.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    public static IServiceCollection AddTemporaryFileProvider(this IServiceCollection services)
     {
-        /// <summary>
-        /// Adds an <see cref="ITemporaryFileProvider"/> using a subdirectory of the user's temp folder with the name of
-        /// the application (<see cref="IHostEnvironment.ApplicationName"/>, defaults to the assembly name). The
-        /// directory will be created if it does not exist, and will be removed when the <see
-        /// cref="TemporaryFileProvider"/> is disposed if empty.
-        /// </summary>
-        public IServiceCollection AddTemporaryFileProvider()
-        {
-            services.AddSingleton<ITemporaryFileProvider, TemporaryFileProvider>();
+        services.AddSingleton<ITemporaryFileProvider, TemporaryFileProvider>();
 
-            return services;
-        }
+        return services;
+    }
 
-        /// <summary>
-        /// Adds an <see cref="ITemporaryFileProvider"/> with the provided options.
-        /// </summary>
-        /// <param name="configure">The action used to configure the options.</param>
-        public IServiceCollection AddTemporaryFileProvider(Action<TemporaryFileProviderOptions> configure)
-        {
-            services.AddTemporaryFileProvider();
-            services.Configure(configure);
+    /// <summary>
+    /// Adds an <see cref="ITemporaryFileProvider"/> with the provided options.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">The action used to configure the options.</param>
+    public static IServiceCollection AddTemporaryFileProvider(this IServiceCollection services, Action<TemporaryFileProviderOptions> configure)
+    {
+        services.AddTemporaryFileProvider();
+        services.Configure(configure);
 
-            return services;
-        }
+        return services;
     }
 }
