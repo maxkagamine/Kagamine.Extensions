@@ -10,14 +10,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            9.0
-            10.0
+          dotnet-version: '10.0.x'
+
       - name: Build
         run: dotnet build
+
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
@@ -26,20 +27,34 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref_type == 'tag'
     permissions:
-      contents: read
-      packages: write
+      id-token: write # Needed for NuGet/login
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            9.0
-            10.0
+          dotnet-version: '10.0.x'
+
+      - name: Log into NuGet
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: maxkagamine
+
+      - name: Prepare readme
+        run: |
+          perl -i -pe '
+            s,^# <img src="(.*?)".*?/>,# ![🍊]($1),;
+            s,<sup>(.*?)</sup>,($1),g;
+            s,\]\((?!http|#),](https://github.com/maxkagamine/Kagamine.Extensions/blob/master/,g;
+            s,^\[日本語\],[View on GitHub](https://github.com/maxkagamine/Kagamine.Extensions) ・ $&,;
+            s,\xE2\x9A\xA0(?!\xEF),\xE2\x9A\xA0\xEF\xB8\x8F,g;
+          ' README.md
+
       - name: Pack
         run: dotnet pack -c Release -p:Version=${GITHUB_REF#refs/tags/v} -o .
+
       - name: Push
-        run: dotnet nuget push Kagamine.Extensions.*.nupkg -k ${GITHUB_TOKEN} -s https://nuget.pkg.github.com/maxkagamine/index.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push Kagamine.Extensions.*.nupkg -k "${{ steps.login.outputs.NUGET_API_KEY }}" -s https://api.nuget.org/v3/index.json

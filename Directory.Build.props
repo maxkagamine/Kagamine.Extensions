@@ -12,13 +12,21 @@
     <NoWarn Condition="$(MSBuildProjectName.EndsWith('.Tests'))">$(NoWarn);CA1515</NoWarn>
 
     <Authors>Max Kagamine</Authors>
-    <Copyright>Copyright © 2024 Max Kagamine</Copyright>
-    <Description>🍊</Description>
+    <Copyright>Copyright © Max Kagamine</Copyright>
+    <Description>🍊️ Useful utilities for .NET development, including a generic host implementation for console applications.</Description>
 
     <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/maxkagamine/Kagamine.Extensions</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/maxkagamine/Kagamine.Extensions/releases</PackageReleaseNotes>
+    <PackageTags>
+      ConsoleApplication ValueArray TemporaryFileProvider RateLimitingHttpHandler BeginTimedOperation
+      TerminalProgressBar Generic Host Dependency Injection Immutable Collection Record Disposable Temporary Temp File
+      Stream HttpClient IHttpClientFactory Rate Limiter Serilog Logging Metrics Console CLI Progress Bar Entity
+      Framework EFCore Microsoft.Extensions.Hosting System.Threading.RateLimiting System.Text.Json Base64 Struct Array
+      Binary Serialization
+    </PackageTags>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -32,6 +40,7 @@
 
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
   <Target Name="SetPackageIconUrl" AfterTargets="InitializeSourceControlInformationFromSourceControlManager">

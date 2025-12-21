@@ -1,8 +1,10 @@
-# <img src="icon.png" height="38" alt="🍊" align="top" /> Kagamine.Extensions
+# <img src="https://raw.githubusercontent.com/maxkagamine/Kagamine.Extensions/bf0cdc7eea084e4bb7fbee740147242df87b975c/icon.svg" width="38" height="38" alt="🍊️" align="top" />&nbsp;Kagamine.Extensions
 
-This repository contains a suite of libraries that provide facilities commonly needed when creating production-ready applications. (As Microsoft puts it.)
+[![Kagamine.Extensions](https://img.shields.io/nuget/v/Kagamine.Extensions?logo=nuget&label=Kagamine.Extensions)](https://www.nuget.org/packages/Kagamine.Extensions) [![Kagamine.Extensions.EntityFramework](https://img.shields.io/nuget/v/Kagamine.Extensions.EntityFramework?logo=nuget&label=Kagamine.Extensions.EntityFramework)](https://www.nuget.org/packages/Kagamine.Extensions.EntityFramework)
 
-Human-coded, as with all of my work.
+[日本語](README.ja.md)
+
+This repository contains a suite of libraries that provide facilities commonly needed when creating production-ready applications (as Microsoft puts it). Human-coded, as with all of my work.
 
 - [Hosting](#hosting)
   - [ConsoleApplication.CreateBuilder()](#consoleapplicationcreatebuilder)
@@ -54,7 +56,7 @@ Compared to repurposing IHostedService or BackgroundService to run a console app
 Several real-world examples of this being used can be found [in Serifu.org's projects](https://github.com/maxkagamine/Serifu.org/blob/master/Serifu.Importer.Skyrim/Program.cs).
 
 > [!NOTE]
-> ASP.NET Core projects include a launchSettings.json by default which sets the environment to "Development" in dev, but this [needs to be done manually](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments) for a console app. The easiest way in Visual Studio is to open Debug > {Project Name} Debug Properties and under Environment Variables add DOTNET_ENVIRONMENT = Development. Note that the `ASPNETCORE_` prefix won't work here, as it's not a WebApplication.
+> ASP.NET Core projects include a launchSettings.json by default which sets the environment to "Development" in dev, but you have to [create this file yourself](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments) for a console app. The easiest way in Visual Studio is to open Debug > {Project Name} Debug Properties and under Environment Variables add `DOTNET_ENVIRONMENT` = `Development`. Note that the `ASPNETCORE_` prefix won't work here, as that's specific to WebApplication.
 
 ## Collections
 
@@ -71,14 +73,14 @@ To solve this, I've created a ValueArray&lt;T&gt; type which represents a read-o
 | ReadOnlyCollection&lt;T&gt; | ✅<sup>1</sup>   | ❌            | ❌                        |
 | IReadOnlyList&lt;T&gt;      | ✅<sup>1</sup>   | ❌            | ❌                        |
 | ImmutableArray&lt;T&gt;<sup>2</sup> | ✅<sup>3,4</sup> | ❌    | ✅<sup>3</sup>            |
-| ReadOnlyMemory&lt;T&gt;     | ✅<sup>4,5</sup> | ❌            | ⚠<sup>5</sup>             |
+| ReadOnlyMemory&lt;T&gt;     | ✅<sup>4,5</sup> | ❌            | ⚠<sup>5</sup>            |
 | **ValueArray&lt;T&gt;**     | ✅<sup>4,6</sup> | ✅            | ✅<sup>6</sup>            |
 
 > 1. ReadOnlyCollection&lt;T&gt; is merely a read-only view of a List&lt;T&gt;, and IReadOnlyList&lt;T&gt; is usually the List&lt;T&gt; itself.
 > 2. Has a bug caused by misuse of the null suppression operator that can cause a null reference exception which won't be caught by static analysis if any code returns its `default`. (ValueArray&lt;T&gt; fixes this by treating a null array as empty, as it is also a struct.)
-> 3. [ImmutableCollectionsMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.immutablecollectionsmarshal?view=net-8.0) can be used to access the underlying array or create an instance backed by an existing array.
+> 3. [ImmutableCollectionsMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.immutablecollectionsmarshal) can be used to access the underlying array or create an instance backed by an existing array.
 > 4. Can be modified inadvertently if a reference is held to the array used to construct it, or if the underlying buffer is accessed and passed to a method that does not treat it as read-only.
-> 5. Depending on how the ReadOnlyMemory&lt;T&gt; was created, it may be possible to access the buffer using [MemoryMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.memorymarshal.trygetarray?view=net-8.0), but there's no guarantee the instance is backed by an actual array, or it may represent a slice of an array (like Span&lt;T&gt;).
+> 5. Depending on how the ReadOnlyMemory&lt;T&gt; was created, it may be possible to access the buffer using [MemoryMarshal](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.memorymarshal.trygetarray), but there's no guarantee the instance is backed by an actual array, or it may represent a slice of an array (like Span&lt;T&gt;).
 > 6. Supports implicit conversion from T[], and the underlying array can be accessed via explicit cast to T[].
 
 ValueArray&lt;T&gt; supports both [collection expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/collection-expressions) and array initializers (via implicit cast):
@@ -106,7 +108,7 @@ entity.Property<ValueArray<byte>>(x => x.Data)
 
 When `T` is an [unmanaged type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types), ValueArray&lt;T&gt; can also be marshaled to and from ReadOnlySpan&lt;byte&gt;. This could be used, for instance, to store an array of structs in a database as an opaque blob using their binary representation.
 
-I've created a JsonConverter that uses this to efficiently serialize a ValueArray&lt;T&gt; as a base 64 string:
+I've created a JsonConverter that uses this to efficiently serialize a ValueArray&lt;T&gt; as a base64 string:
 
 ```cs
 ValueArray<DateTime> dates = [ DateTime.Parse("2007-08-31"), DateTime.Parse("2007-12-27") ];
@@ -115,7 +117,7 @@ var options = new JsonSerializerOptions() { Converters = { new JsonBase64ValueAr
 var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=="
 ```
 
-To deserialize an array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
+To deserialize a JSON array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
 
 ## IO
 
