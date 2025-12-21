@@ -16,4 +16,9 @@
     <ProjectReference Include="..\..\Kagamine.Extensions\Kagamine.Extensions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- https://learn.microsoft.com/en-us/dotnet/core/compatibility/networking/9.0/query-redaction-events -->
+    <RuntimeHostConfigurationOption Include="System.Net.Http.DisableUriRedaction" Value="true" />
+  </ItemGroup>
+
 </Project>

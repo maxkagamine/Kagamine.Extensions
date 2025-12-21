@@ -7,7 +7,6 @@ using Kagamine.Extensions.IO;
 using Kagamine.Extensions.Logging;
 using Kagamine.Extensions.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
@@ -21,8 +20,8 @@ builder.Services.AddSerilog(config => config
     .WriteTo.Console(new ExpressionTemplate(
         "{#if SourceContext is not null}[{SourceContext}] {#end}{@m}\n{@x}", theme: TemplateTheme.Code)));
 
-// Kagamine.Extensions.Utilities.RateLimitingHttpHandler(Factory)
-builder.Services.AddHttpClient(Options.DefaultName).AddRateLimiting();
+// Kagamine.Extensions.Http.RateLimitingHttpHandler(Factory)
+builder.Services.ConfigureHttpClientDefaults(builder => builder.AddRateLimiting());
 
 // Kagamine.Extensions.IO.TemporaryFileProvider
 builder.Services.AddTemporaryFileProvider();
@@ -45,10 +44,10 @@ builder.Run(async (
     {
         string url = i > 4 ? $"http://example.com/?i={i}" : $"https://httpbin.org/delay/5?i={i}";
 
-        // Kagamine.Extensions.Logging.TimedOperationExtensions
+        // Kagamine.Extensions.Logging.TimedOperationExtension
         using (logger.BeginTimedOperation("Request to {Url}", url))
         {
-            // Requests rate limited by hostname using Kagamine.Extensions.Utilities.RateLimitingHttpHandler
+            // Requests rate limited by hostname using Kagamine.Extensions.Http.RateLimitingHttpHandler
             //
             // Notice that the example.com requests complete 3s apart from each other, while the httpbin.org requests
             // finish independently, spaced 8s apart (5s delay + 3s rate limit between response and request)
