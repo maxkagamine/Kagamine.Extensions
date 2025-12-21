@@ -6,8 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace Kagamine.Extensions.Tests.Collections;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1861:Avoid constant arrays as arguments", Justification = "Tests")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Bug in IDE analyzer")]
 public class ValueArrayTests
 {
     private sealed record Person(string Surname, string GivenName);
@@ -74,5 +72,18 @@ public class ValueArrayTests
 
         Assert.True(bars > foos);
         Assert.True(foos < bars);
+    }
+
+    [Fact]
+    public void NullArrayIsTreatedAsEmpty()
+    {
+        ValueArray<int> nullPtr = default;
+        ValueArray<int> emptyArr = Array.Empty<int>();
+
+        Assert.Equal(0, nullPtr.Length);
+        Assert.True(nullPtr == emptyArr);
+        Assert.Equal(emptyArr.GetHashCode(), nullPtr.GetHashCode());
+        Assert.Equal(0, nullPtr.CompareTo(emptyArr));
+        Assert.False(nullPtr.GetEnumerator().MoveNext());
     }
 }

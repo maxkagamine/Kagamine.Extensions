@@ -23,36 +23,43 @@ public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T
 {
     public static readonly ValueArray<T> Empty = default;
 
-    private readonly T[]? array;
+    private readonly T[]? inner;
 
     public ValueArray(T[] array)
     {
-        this.array = array;
+        inner = array;
     }
 
-    private T[] Array => array ?? [];
-
-    public int Length => Array.Length;
+    /// <summary>
+    /// Gets the number of elements in the array.
+    /// </summary>
+    public int Length => inner?.Length ?? 0;
 
     /// <summary>
     /// Creates a new span over the array.
     /// </summary>
-    public ReadOnlySpan<T> AsSpan() => Array.AsSpan();
+    public ReadOnlySpan<T> AsSpan() => inner is null ? ReadOnlySpan<T>.Empty : inner.AsSpan();
 
     public static implicit operator ReadOnlySpan<T>(ValueArray<T> array) => array.AsSpan();
 
     public static implicit operator ValueArray<T>(T[] array) => new(array);
 
-    public static explicit operator T[](ValueArray<T> array) => array.Array;
+    public static explicit operator T[](ValueArray<T> array) => array.inner ?? [];
 
     #region IReadOnlyList
-    public T this[int index] => Array[index];
+    /// <summary>
+    /// Gets the element at the specified index.
+    /// </summary>
+    /// <param name="index">The index of the element to get.</param>
+    /// <exception cref="IndexOutOfRangeException"><paramref name="index"/> is less than 0 or greater than or equal to
+    /// <see cref="Length"/>.</exception>
+    public T this[int index] => (inner ?? [])[index];
 
     int IReadOnlyCollection<T>.Count => Length;
 
-    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Array).GetEnumerator();
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)(inner ?? [])).GetEnumerator();
 
-    IEnumerator IEnumerable.GetEnumerator() => Array.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => (inner ?? []).GetEnumerator();
     #endregion
 
     #region IEquatable
@@ -60,16 +67,24 @@ public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T
 
     public static bool operator !=(ValueArray<T> left, ValueArray<T> right) => !(left == right);
 
-    public override bool Equals(object? obj) => Equals(obj, EqualityComparer<T>.Default);
-
     public bool Equals(ValueArray<T> other) => Equals(other, EqualityComparer<T>.Default);
 
-    public bool Equals(object? other, IEqualityComparer comparer) =>
-        other is ValueArray<T> obj && ((IStructuralEquatable)Array).Equals(obj.Array, comparer);
+    /// <inheritdoc cref="Equals(ValueArray{T})"/>
+    /// <param name="other">An object to compare with this object.</param>
+    /// <param name="comparer">An object that determines whether the current instance and <paramref name="other"/> are
+    /// equal.</param>
+    public bool Equals(ValueArray<T> other, IEqualityComparer comparer) =>
+        ((IStructuralEquatable)(inner ?? [])).Equals(other.inner ?? [], comparer);
+
+    public override bool Equals(object? obj) =>
+        obj is ValueArray<T> array && Equals(array, EqualityComparer<T>.Default);
+
+    bool IStructuralEquatable.Equals(object? other, IEqualityComparer comparer) =>
+        other is ValueArray<T> array && Equals(array, comparer);
 
     public override int GetHashCode() => GetHashCode(EqualityComparer<T>.Default);
 
-    public int GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)Array).GetHashCode(comparer);
+    public int GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)(inner ?? [])).GetHashCode(comparer);
     #endregion
 
     #region IComparable
@@ -83,8 +98,24 @@ public readonly struct ValueArray<T> : IReadOnlyList<T>, IEquatable<ValueArray<T
 
     public int CompareTo(ValueArray<T> other) => CompareTo(other, Comparer<T>.Default);
 
-    public int CompareTo(object? other, IComparer comparer) =>
-        ((IStructuralComparable)Array).CompareTo(other is ValueArray<T> array ? array.Array : null, comparer);
+    /// <inheritdoc cref="CompareTo(ValueArray{T})"/>
+    /// <param name="other">An object to compare with this instance.</param>
+    /// <param name="comparer">An object that compares members of the current collection object with the corresponding
+    /// members of <paramref name="other"/>.</param>
+    public int CompareTo(ValueArray<T> other, IComparer comparer) =>
+        ((IStructuralComparable)(inner ?? [])).CompareTo(other.inner ?? [], comparer);
+
+    int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+    {
+        if (other is not ValueArray<T> array || array.Length != Length)
+        {
+            // Consistent with Array's IStructuralComparable.CompareTo(). Note that you can still do
+            // `valueArray.CompareTo(actualArray, comparer)`, as actualArray will get implicitly cast to ValueArray<T>.
+            throw new ArgumentException($"The object is not a {nameof(ValueArray<>)} with the same number of elements as the array to compare it to.", nameof(other));
+        }
+
+        return CompareTo(array, comparer);
+    }
     #endregion
 }
 
