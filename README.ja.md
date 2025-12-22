@@ -64,7 +64,7 @@ builder.Run((IFooService fooService, CancellationToken cancellationToken) =>
 
 現在、.NETでは不変性と値セマンティクスの両方を維持しながらコレクションをレコードに入れる解決策は存在しません。それにスパンに対応しないAPIとの相互運用のために、基になる配列へのアクセスが必要になる場合もあります（特に、コピーするとパフォーマンスに大きな影響を与える可能性のあるバイト配列の場合）。
 
-これを解決するため、私は不変のレコードでの使用に適した値セマンティクスのある読み込み専用配列を表すValueArray&lt;T&gt;型を作りました。
+これを解決するため、私は不変のレコードでの使用に適した値セマンティクスのある読み取り専用配列を表すValueArray&lt;T&gt;型を作りました。
 
 | 型                          | 不変              | 値の等価性      | コピーせず配列へ/から |
 | --------------------------- | ---------------- | -------------- | ------------------ |
@@ -76,10 +76,10 @@ builder.Run((IFooService fooService, CancellationToken cancellationToken) =>
 | ReadOnlyMemory&lt;T&gt;     | ✅<sup>4,5</sup> | ❌            | ⚠<sup>5</sup>     |
 | **ValueArray&lt;T&gt;**     | ✅<sup>4,6</sup> | ✅            | ✅<sup>6</sup>     |
 
-> 1. ReadOnlyCollection&lt;T&gt;はただのList&lt;T&gt;の読み込み専用ビューで、IReadOnlyList&lt;T&gt;は普通にList&lt;T&gt;自体です。
+> 1. ReadOnlyCollection&lt;T&gt;はただのList&lt;T&gt;の読み取り専用ビューで、IReadOnlyList&lt;T&gt;は普通にList&lt;T&gt;自体です。
 > 2. null免除演算子の誤用によるバグがあります。いずれかのコードがその`default`を返すと、静的解析で検出されないnull参照例外が発生する可能性があります。（ValueArray&lt;T&gt;も構造体ですが、null配列を空の配列として扱ってこの問題を回避します。）
 > 3.  [ImmutableCollectionsMarshal](https://learn.microsoft.com/ja-jp/dotnet/api/system.runtime.interopservices.immutablecollectionsmarshal)を使って、基になる配列にアクセスすることも、既存の配列を基にしたインスタンスを作成することも可能です。
-> 4. 構築するために使用した配列への参照が保持される場合、もしくは基になるバッファがアクセスされて読み込み専用として扱わないメソッドへ渡される場合は、誤って変更される可能性があります。
+> 4. 構築するために使用した配列への参照が保持される場合、もしくは基になるバッファがアクセスされて読み取り専用として扱わないメソッドへ渡される場合は、誤って変更される可能性があります。
 > 5. ReadOnlyMemory&lt;T&gt;がどうやって作られたかによって、[MemoryMarshal](https://learn.microsoft.com/ja-jp/dotnet/api/system.runtime.interopservices.memorymarshal.trygetarray)を使ってバッファにアクセスすることが可能かもしれませんが、インスタンスが実際の配列に裏付けられている保証がないし、配列のスライスを表す可能性もあります（Span&lt;T&gt;みたいに）。
 > 6. T[]からの暗黙的な変換をサポートし、基になる配列はT[]への明示的なキャストによってアクセスできます。
 
@@ -106,9 +106,18 @@ entity.Property<ValueArray<byte>>(x => x.Data)
     .HasConversion(model => (byte[])model, column => column);
 ```
 
-`T`が[アンマネージ型](https://learn.microsoft.com/ja-jp/dotnet/csharp/language-reference/builtin-types/unmanaged-types)である場合は、ValueArray&lt;T&gt;がReadOnlySpan&lt;byte&gt;へ/からマーシャリングすることもできます。例えば、構造体の配列をバイナリ表現のままにして、不透明なblobとしてデータベースに保存する用途に使えます。
+`T`が[アンマネージ型](https://learn.microsoft.com/ja-jp/dotnet/csharp/language-reference/builtin-types/unmanaged-types)である場合は、ValueArray&lt;T&gt;がReadOnlySpan&lt;byte&gt;へ/からマーシャリングすることもできます。例えば、バイナリ表現を使って構造体の配列を不透明なblobとしてデータベースに保存する用途に利用できます：
 
-この機能を活用して、ValueArray&lt;T&gt;を効率的にbase64の文字列としてシリアル化するJsonConverterを作成しました：
+```cs
+readonly record struct Alignment(ushort FromStart, ushort FromEnd, ushort ToStart, ushort ToEnd);
+
+entity.Property<ValueArray<Alignment>>(q => q.AlignmentData)
+    .HasConversion(
+        model => ValueArray.ToByteArray(model), // model.AsBytes().ToArray() 相当
+        column => ValueArray.FromBytes<Alignment>(column));
+```
+
+ちなみに、Serifu.orgはこの方法で[単語アラインメント](https://github.com/maxkagamine/word-alignment-demo/blob/master/README.ja.md)データをローカルのSQLiteデータベースに保存しています。同じ手法で構造体のValueArray&lt;T&gt;をJSONで効率的にbase64文字列としてシリアル化するJsonConverterも作りました（本番でアラインメントデータをElasticsearchに保存するために実用されています）:
 
 ```cs
 ValueArray<DateTime> dates = [ DateTime.Parse("2007-08-31"), DateTime.Parse("2007-12-27") ];
@@ -117,7 +126,7 @@ var options = new JsonSerializerOptions() { Converters = { new JsonBase64ValueAr
 var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=="
 ```
 
-JSON配列をValueArray&lt;T&gt;として逆シリアル化するには（System.Text.Jsonはネイティブにカスタムな読み込み専用コレクションに逆シリアル化できないため）、JsonValueArrayConverterを使用してください。両方のコンバーターは、特定のTのために組み合わせられるジェネリック版もあります。
+コンバーターなしで、ValueArray&lt;T&gt;は通常の配列としてシリアル化されます。JSON配列をValueArray&lt;T&gt;として**逆シリアル化する**には（System.Text.Jsonはネイティブにカスタムの読み取り専用コレクションに逆シリアル化できないため）、JsonValueArrayConverterを使用してください。両方のコンバーターには、特定のT向けに組み合わせて使えるジェネリック版もあります。
 
 ## IO
 

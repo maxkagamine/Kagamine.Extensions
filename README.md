@@ -106,9 +106,18 @@ entity.Property<ValueArray<byte>>(x => x.Data)
     .HasConversion(model => (byte[])model, column => column);
 ```
 
-When `T` is an [unmanaged type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types), ValueArray&lt;T&gt; can also be marshaled to and from ReadOnlySpan&lt;byte&gt;. This could be used, for instance, to store an array of structs in a database as an opaque blob using their binary representation.
+When `T` is an [unmanaged type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types), ValueArray&lt;T&gt; can also be marshaled to and from ReadOnlySpan&lt;byte&gt;. This could be used, for instance, to store an array of structs in a database as an opaque blob using their binary representation:
 
-I've created a JsonConverter that uses this to efficiently serialize a ValueArray&lt;T&gt; as a base64 string:
+```cs
+readonly record struct Alignment(ushort FromStart, ushort FromEnd, ushort ToStart, ushort ToEnd);
+
+entity.Property<ValueArray<Alignment>>(q => q.AlignmentData)
+    .HasConversion(
+        model => ValueArray.ToByteArray(model), // Equivalent to model.AsBytes().ToArray()
+        column => ValueArray.FromBytes<Alignment>(column));
+```
+
+Incidentally, this is how Serifu.org stores [word alignment](https://github.com/maxkagamine/word-alignment-demo) data in a local SQLite DB. I've also created a JsonConverter that uses the same technique to efficiently serialize a ValueArray&lt;T&gt; of structs in JSON as a base64 string (which it uses in production for storing the alignment data in Elasticsearch):
 
 ```cs
 ValueArray<DateTime> dates = [ DateTime.Parse("2007-08-31"), DateTime.Parse("2007-12-27") ];
@@ -117,7 +126,7 @@ var options = new JsonSerializerOptions() { Converters = { new JsonBase64ValueAr
 var json = JsonSerializer.Serialize(dates, options); // "AIAeAnm5yQgAAN2OMhbKCA=="
 ```
 
-To deserialize a JSON array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
+Without a converter, a ValueArray&lt;T&gt; will serialize as a regular array. To _deserialize_ a JSON array as ValueArray&lt;T&gt; (as System.Text.Json cannot natively deserialize to a custom readonly collection), use the JsonValueArrayConverter. Both converters have generic versions to mix-and-match for specific T's.
 
 ## IO
 
