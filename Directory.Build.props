@@ -9,7 +9,6 @@
 
     <AnalysisMode>recommended</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <NoWarn Condition="$(MSBuildProjectName.EndsWith('.Tests'))">$(NoWarn);CA1515</NoWarn>
 
     <Authors>Max Kagamine</Authors>
     <Copyright>Copyright © Max Kagamine</Copyright>

@@ -28,7 +28,6 @@ indent_size = 4
 #
 #   <AnalysisMode>recommended</AnalysisMode>
 #   <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-#   <NoWarn Condition="$(MSBuildProjectName.EndsWith('.Tests'))">$(NoWarn);CA1515</NoWarn>
 #
 
 # CA1305: Specify IFormatProvider
@@ -39,9 +38,6 @@ dotnet_diagnostic.CA1063.severity = warning
 
 # CA1033: Interface methods should be callable by child types
 dotnet_diagnostic.CA1033.severity = warning
-
-# CA1515: Consider making public types internal
-dotnet_diagnostic.CA1515.severity = warning
 
 # CA1851: Possible multiple enumerations of 'IEnumerable' collection
 dotnet_diagnostic.CA1851.severity = warning
