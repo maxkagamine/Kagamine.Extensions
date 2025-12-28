@@ -4,7 +4,7 @@
 
 [English](README.md)
 
-このリポジトリには、本番に適したアプリケーションを開発する際に一般的に必要となるファシリティを提供するライブラリ群が含まれています（Microsoftの言い方を借りると）。私のすべての作品と同じく人間の手で書かれたコードです。
+このリポジトリには、本番に適したアプリケーションを開発する際に一般的に必要となるファシリティを提供するライブラリ群が含まれています（Microsoftの言い方を借りると）。私の他の作品と同様に人間製のコードです。
 
 - [Hosting](#hosting)
   - [ConsoleApplication.CreateBuilder()](#consoleapplicationcreatebuilder)
