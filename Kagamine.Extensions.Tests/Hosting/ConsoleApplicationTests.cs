@@ -68,4 +68,24 @@ public class ConsoleApplicationTests
 
         disposableService.Verify(x => x.Dispose());
     }
+
+    [Fact]
+    public void DoesNotSwallowUnexpectedCancellations()
+    {
+        var host = ConsoleApplication.CreateBuilder().Build();
+        var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+
+        // HttpClient's default 100s timeout throws TaskCanceledException. If the host were to simply catch any
+        // OperationCanceledException without checking if a stop was requested, this uncaught exception wouldn't be
+        // logged and would be treated like a Ctrl+C had been sent instead.
+        Assert.Throws<TaskCanceledException>(() =>
+        {
+            host.Run(cancellationToken =>
+            {
+                throw new TaskCanceledException();
+            });
+        });
+
+        Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
+    }
 }

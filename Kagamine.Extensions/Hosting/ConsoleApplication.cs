@@ -77,7 +77,7 @@ public sealed class ConsoleApplication : IHost
         {
             action(lifetime.ApplicationStopping);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (lifetime.ApplicationStopping.IsCancellationRequested)
         {
             // no op
         }
