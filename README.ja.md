@@ -14,6 +14,7 @@
   - [TemporaryFileProvider](#temporaryfileprovider)
 - [Http](#http)
   - [RateLimitingHttpHandler](#ratelimitinghttphandler)
+    - [Pollyとレートリミットを併用する](#pollyとレートリミットを併用する)
 - [Logging](#logging)
   - [BeginTimedOperation](#begintimedoperation)
 - [Utilities](#utilities)
@@ -208,9 +209,48 @@ builder.Services.Configure<RateLimitingHttpHandlerOptions>(options =>
 });
 ```
 
+>[!WARNING]
+> HttpClientにはデフォルトで100秒のタイムアウトがあり、その時点でTaskCanceledExceptionをスローします。これは、レートリミッターやあらゆるリトライハンドラーを含む、ハンドラーチェーン**全体**に適用されます。長いTimeBetweenRequestsを設定した場合や、リトライのためにPollyを使っている場合は、タイムアウトを延長するか、それを無効にして代わりに以下に示すようにPollyのリクエストごとのタイムアウトを使った方がいいです。
+
 タイマーは、リクエストを送信する前ではなく、レスポンスが受信されて呼び出し元に返された後で開始することに注意してください。じゃないと、遅いレスポンスやネットワーク遅延によってリクエストがレートリミットを実質的に受けていない挙動を示す可能性があります。
 
 デモを見るには、サンプル[ConsoleApp](Samples/ConsoleApp/Program.cs)を実行してください。
+
+#### Pollyとレートリミットを併用する
+
+<img src=".github/images/Http handler chain diagram.svg" align="right" width="250" />
+
+RateLimitingHttpHandlerは、リトライやタイムアウトなどを可能にするためにPollyと併用できます。HttpClientでPollyを使うことについて詳しくは、[ASP.NET Coreのドキュメントを参照してください](https://learn.microsoft.com/ja-jp/aspnet/core/fundamentals/http-requests#use-polly-based-handlers)。（なお、別のPolly.RateLimitingパッケージがありますが、それはHttpClientで使うために設計されたものでは**ありません**。）
+
+ハンドラーの順序は重要です：最初のハンドラーが2つ目をラップして、以下同様に続き、最も内側のSocketsHttpHandlerが最後に追加されます。タイムアウトポリシーがレートリミットの**後**にある（リクエスト間の時間をカウントしないように）こと、そしてその他のポリシーがレートリミットの**前**にある（リトライがレートリミットをスキップしないように）ことを確認してください。ブレークポイントを置いてHttpClientの`_handler`（「非パブリック メンバー」の下）を見ると、ハンドラーチェーンが正しく設定されていることを再確認できます。
+
+以下はコピーできる例です：
+
+```cs
+builder.Services.AddHttpClient();
+builder.Services.ConfigureHttpClientDefaults(builder => builder
+    .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan) // このタイムアウトはハンドラーチェーン全体に適用。代わりにPollyを使用
+    .AddPolicyHandler(HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .Or<TimeoutRejectedException>()
+        .RetryAsync(retryCount: 3, (res, _) =>
+        {
+            if (res.Exception is null)
+            {
+                Log.Error("{StatusCode} レスポンスを受信し、リトライします", res.Result.StatusCode);
+            }
+            else if (res.Exception is TimeoutRejectedException)
+            {
+                Log.Error("リクエストがタイムアウトし、リトライします");
+            }
+            else
+            {
+                Log.Error(res.Exception, "リクエストが失敗し、リトライします");
+            }
+        }))
+    .AddRateLimiting() // リトライがレートリミットハンドラーの外側に、タイムアウトが内側にあることが重要です
+    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromMinutes(1))));
+```
 
 ## Logging
 

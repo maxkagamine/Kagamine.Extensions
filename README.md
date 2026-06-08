@@ -14,6 +14,7 @@ This repository contains a suite of libraries that provide facilities commonly n
   - [TemporaryFileProvider](#temporaryfileprovider)
 - [Http](#http)
   - [RateLimitingHttpHandler](#ratelimitinghttphandler)
+    - [Using rate limiting with Polly](#using-rate-limiting-with-polly)
 - [Logging](#logging)
   - [BeginTimedOperation](#begintimedoperation)
 - [Utilities](#utilities)
@@ -209,9 +210,50 @@ builder.Services.Configure<RateLimitingHttpHandlerOptions>(options =>
 });
 ```
 
+>[!WARNING]
+> HttpClient has a default 100-second timeout, at which point it throws TaskCanceledException. This applies to the **entire** handler chain, including the rate limiter and any retry handlers. If you've set a long TimeBetweenRequests, or if you're using Polly for retries, you'll want to either increase the timeout or disable it and use Polly's per-request timeouts instead as shown below.
+
 Note that the timer starts _after_ the response has been received and returned to the caller, not before sending the request. Otherwise, slow responses and network latency could result in requests exhibiting effectively no rate limit.
 
+When information logging for the System.Net.Http namespace is enabled, you'll see "Start processing HTTP request" immediately, followed by "Sending HTTP request" once the request makes it to the bottom of the handler chain and actually gets sent. The rate limiter doesn't produce any logs of its own.
+
 Run the sample [ConsoleApp](Samples/ConsoleApp/Program.cs) for a demo.
+
+#### Using rate limiting with Polly
+
+<img src=".github/images/Http handler chain diagram.svg" align="right" width="250" />
+
+RateLimitingHttpHandler can be used alongside Polly to enable retries and timeouts, etc. For details on using Polly with HttpClient, [see the ASP.NET Core docs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-requests#use-polly-based-handlers). (Note that there is a separate Polly.RateLimiting package, but it is _not_ designed to be used with HttpClient.)
+
+The order of handlers is important: the first handler wraps the second, and so on, with the innermost SocketsHttpHandler being added to the end. Make sure that the timeout policy is _after_ the rate limit (so that it doesn't count the time between requests) and that any other policies are _before_ the rate limit (so that a retry doesn't skip the rate limit). You can double check the handler chain is set up properly by dropping a breakpoint and looking at your HttpClient's `_handler` (under "Non-Public Members").
+
+Here is an example you can copy:
+
+```cs
+builder.Services.AddHttpClient();
+builder.Services.ConfigureHttpClientDefaults(builder => builder
+    .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan) // This timeout applies to the entire handler chain; using Polly instead
+    .AddPolicyHandler(HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .Or<TimeoutRejectedException>()
+        .RetryAsync(retryCount: 3, (res, _) =>
+        {
+            if (res.Exception is null)
+            {
+                Log.Error("Received a {StatusCode} response, retrying", res.Result.StatusCode);
+            }
+            else if (res.Exception is TimeoutRejectedException)
+            {
+                Log.Error("Request timed out, retrying");
+            }
+            else
+            {
+                Log.Error(res.Exception, "Request failed, retrying");
+            }
+        }))
+    .AddRateLimiting() // Important that the retry be outside and the timeout inside of the rate limiting handler
+    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromMinutes(1))));
+```
 
 ## Logging
 
